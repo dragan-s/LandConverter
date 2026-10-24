@@ -15,6 +15,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class ConverterViewModel @Inject constructor(
@@ -50,7 +51,7 @@ class ConverterViewModel @Inject constructor(
         inputAmount = value
         debounceJob?.cancel()
         debounceJob = viewModelScope.launch {
-            delay(INPUT_DEBOUNCE_MS)
+            delay(INPUT_DEBOUNCE_MS.milliseconds)
             recalculate()
         }
     }
