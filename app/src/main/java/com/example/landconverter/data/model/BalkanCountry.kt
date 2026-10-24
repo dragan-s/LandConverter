@@ -4,7 +4,7 @@ sealed class BalkanCountry(
     val id: String,
     val displayName: String
 ) {
-    data object StandardSI : BalkanCountry("si", "SI standard")
+    //data object StandardSI : BalkanCountry("si", "SI standard")
     data object BosniaAndHerzegovina : BalkanCountry("ba", "Bosna i Hercegovina")
     data object Serbia : BalkanCountry("rs", "Srbija")
     data object Montenegro : BalkanCountry("me", "Crna Gora")
