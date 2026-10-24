@@ -1,0 +1,28 @@
+# Gradle files and build caches
+.gradle/
+build/
+.kotlin/
+
+# Local configuration file (contains your local Android SDK path - machine specific)
+local.properties
+
+# Log and OS-specific files
+*.log
+.DS_Store
+Thumbs.db
+
+# Android Studio auto-generated outputs
+captures/
+.externalNativeBuild/
+.cxx/
+*.aab
+*.apk
+output-metadata.json
+
+# IntelliJ / Android Studio IDE config files
+*.iml
+.idea/
+
+# Keystore files (NEVER commit your production signing keys)
+*.jks
+*.keystore
