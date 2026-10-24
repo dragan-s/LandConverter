@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.landconverter.data.model.AppStrings
 import com.example.landconverter.data.model.BalkanCountry
 import com.example.landconverter.data.model.ConverterOptions
 import com.example.landconverter.data.model.LandUnit
@@ -36,9 +35,9 @@ class ConverterViewModel @Inject constructor(
     var inputError: String? by mutableStateOf(null)
         private set
 
-    /** Tekstovi prate trenutno izabranu državu. */
-    val uiStrings: AppStrings
-        get() = selectedCountry.uiStrings
+    /** Tekstovi prate trenutno izabranu državu preko prezentacionog sloja. */
+    val uiStrings: AppUiStrings
+        get() = CountryStringProvider.getStrings(selectedCountry)
 
     private var debounceJob: Job? = null
 
