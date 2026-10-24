@@ -71,9 +71,9 @@ sealed class LandUnit(val id: String) {
 
     data object Motika : LandUnit("motika") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 300.0
-            Serbia -> 576.0
-            Montenegro -> 400.0
+            BosniaAndHerzegovina -> 750.0
+            Serbia -> 750.0  // između 700 i 800 m² , uzeta srednja vrednost
+            Montenegro -> 700.0
             NorthMacedonia -> 800.0
             Croatia -> 800.0
         }
@@ -91,7 +91,7 @@ sealed class LandUnit(val id: String) {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
             BosniaAndHerzegovina -> 3600.0
             Serbia -> 2878.0
-            Montenegro -> 3000.0
+            Montenegro -> 1700.0 // 1600 m² – 1800 m² Mera za oranice i njive. Uzeta srednja vrednost od 1700 m²
             NorthMacedonia -> 1600.0
             Croatia -> 5755.0
         }
@@ -110,13 +110,14 @@ sealed class LandUnit(val id: String) {
 
         override fun getLocalizedName(country: BalkanCountry): String = when (country) {
             NorthMacedonia -> "Рало (ден орање)"
+            Serbia -> "Ralo (dan oranja)"
             else -> "Ralo (dan oranja)"
         }
     }
 
     data object Lanac : LandUnit("lanac") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 7193.3
+            BosniaAndHerzegovina -> 7192.0
             Serbia -> 7192.0
             Montenegro -> 7193.3
             NorthMacedonia -> 5000.0
@@ -150,9 +151,9 @@ sealed class LandUnit(val id: String) {
 
         fun getUnitsForCountry(country: BalkanCountry): List<LandUnit> {
             return when (country) {
-                is BosniaAndHerzegovina -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, Lanac, JutroRal)
-                is Serbia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, Lanac, JutroRal)
-                is Montenegro -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, Lanac, JutroRal)
+                is BosniaAndHerzegovina -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Lanac, JutroRal)
+                is Serbia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Lanac, JutroRal, RaloDanOranja)
+                is Montenegro -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo)
                 is NorthMacedonia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, RaloDanOranja)
                 is Croatia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, JutroRal)
             }
