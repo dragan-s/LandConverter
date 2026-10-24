@@ -75,7 +75,7 @@ sealed class LandUnit(val id: String) {
             Serbia -> 576.0
             Montenegro -> 400.0
             NorthMacedonia -> 800.0
-            Croatia -> 360.0
+            Croatia -> 800.0
         }
 
         override fun getLocalizedName(country: BalkanCountry): String = when (country) {
@@ -93,7 +93,7 @@ sealed class LandUnit(val id: String) {
             Serbia -> 2878.0
             Montenegro -> 3000.0
             NorthMacedonia -> 1600.0
-            Croatia -> 2878.0
+            Croatia -> 5755.0
         }
 
         override fun getLocalizedName(country: BalkanCountry): String = when (country) {
@@ -101,7 +101,7 @@ sealed class LandUnit(val id: String) {
             Serbia -> "Ralo"
             Montenegro -> "Ralo"
             NorthMacedonia -> "Рало"
-            Croatia -> "Ralo"
+            Croatia -> "Ral"
         }
     }
 
@@ -154,7 +154,7 @@ sealed class LandUnit(val id: String) {
                 is Serbia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, Lanac, JutroRal)
                 is Montenegro -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, Lanac, JutroRal)
                 is NorthMacedonia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, Ralo, RaloDanOranja)
-                is Croatia -> listOf(KvadratniMetar, Ar, Hektar, JutroRal, Lanac, Motika, Ralo)
+                is Croatia -> listOf(KvadratniMetar, Ar, Hektar, Dulum, Motika, JutroRal)
             }
         }
     }
