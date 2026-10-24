@@ -40,6 +40,9 @@ class ConverterViewModel @Inject constructor(
     val uiStrings: AppUiStrings
         get() = CountryStringProvider.getStrings(selectedCountry)
 
+    val availableUnits: List<LandUnit>
+        get() = LandUnit.getUnitsForCountry(selectedCountry)
+
     private var debounceJob: Job? = null
 
     init {
@@ -68,6 +71,13 @@ class ConverterViewModel @Inject constructor(
 
     fun onCountryChange(country: BalkanCountry) {
         selectedCountry = country
+        val newUnits = LandUnit.getUnitsForCountry(country)
+        if (fromUnit !in newUnits) {
+            fromUnit = newUnits.firstOrNull() ?: LandUnit.KvadratniMetar
+        }
+        if (toUnit !in newUnits) {
+            toUnit = newUnits.getOrNull(1) ?: newUnits.firstOrNull() ?: LandUnit.KvadratniMetar
+        }
         recalculateNow() // ažurira i lokalizovanu poruku greške
     }
 

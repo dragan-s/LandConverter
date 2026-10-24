@@ -73,7 +73,7 @@ fun ConverterScreen(viewModel: ConverterViewModel = viewModel()) {
             DropdownField(
                 label = strings.fromUnitLabel,
                 selectedText = viewModel.fromUnit.getLocalizedName(country),
-                options = viewModel.options.units,
+                options = viewModel.availableUnits,
                 optionLabel = { it.getLocalizedName(country) },
                 onOptionSelected = viewModel::onFromUnitChange
             )
@@ -81,7 +81,7 @@ fun ConverterScreen(viewModel: ConverterViewModel = viewModel()) {
             DropdownField(
                 label = strings.toUnitLabel,
                 selectedText = viewModel.toUnit.getLocalizedName(country),
-                options = viewModel.options.units,
+                options = viewModel.availableUnits,
                 optionLabel = { it.getLocalizedName(country) },
                 onOptionSelected = viewModel::onToUnitChange
             )
