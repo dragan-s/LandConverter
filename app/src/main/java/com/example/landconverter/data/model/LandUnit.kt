@@ -9,6 +9,12 @@ import com.example.landconverter.data.model.BalkanCountry.Serbia
 /** Katastarsko jutro (1600 četvornih hvati) u m². */
 private const val CADASTRAL_JUTRO_SQM = 5754.64
 
+/** jedna motika zemlje U m²  */
+private const val MOTIKA_SQM = 800.0
+
+/** jedan dulum zemlje U m²  */
+private const val DULUM_SQM = 1000.0
+
 /**
  * Tradicionalne jedinice su regionalno promenljive i u praksi se razlikuju od sela do sela.
  * Vrednosti ispod su približne referentne vrednosti i lako se menjaju u okviru `when` blokova.
@@ -53,11 +59,11 @@ sealed class LandUnit(val id: String) {
 
     data object Dulum : LandUnit("dulum") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 1000.0
-            Serbia -> 1000.0
-            Montenegro -> 1000.0
-            NorthMacedonia -> 1000.0
-            Croatia -> 1000.0
+            BosniaAndHerzegovina -> DULUM_SQM
+            Serbia -> DULUM_SQM
+            Montenegro -> DULUM_SQM
+            NorthMacedonia -> DULUM_SQM
+            Croatia -> DULUM_SQM
         }
 
         override fun getLocalizedName(country: BalkanCountry): String = when (country) {
@@ -71,11 +77,11 @@ sealed class LandUnit(val id: String) {
 
     data object Motika : LandUnit("motika") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 750.0
-            Serbia -> 750.0  // između 700 i 800 m² , uzeta srednja vrednost
-            Montenegro -> 700.0
-            NorthMacedonia -> 800.0
-            Croatia -> 800.0
+            BosniaAndHerzegovina -> MOTIKA_SQM
+            Serbia -> MOTIKA_SQM
+            Montenegro -> MOTIKA_SQM
+            NorthMacedonia -> MOTIKA_SQM
+            Croatia -> MOTIKA_SQM
         }
 
         override fun getLocalizedName(country: BalkanCountry): String = when (country) {
@@ -89,9 +95,9 @@ sealed class LandUnit(val id: String) {
 
     data object Ralo : LandUnit("ralo") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 3600.0
+            BosniaAndHerzegovina -> 3600.0 //ne korisit se u bosni
             Serbia -> 2878.0
-            Montenegro -> 1700.0 // 1600 m² – 1800 m² Mera za oranice i njive. Uzeta srednja vrednost od 1700 m²
+            Montenegro -> 1820.0
             NorthMacedonia -> 1600.0
             Croatia -> 5755.0
         }
@@ -117,10 +123,10 @@ sealed class LandUnit(val id: String) {
 
     data object Lanac : LandUnit("lanac") {
         override fun getValueInSqMeters(country: BalkanCountry): Double = when (country) {
-            BosniaAndHerzegovina -> 7192.0
+            BosniaAndHerzegovina -> 7193.3
             Serbia -> 7192.0
             Montenegro -> 7193.3
-            NorthMacedonia -> 5000.0
+            NorthMacedonia -> 5000.0  // lanac se ne koristi umakedoniji
             Croatia -> 7193.3
         }
 
