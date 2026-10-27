@@ -286,8 +286,9 @@ private fun UnitEditRow(
     onUpdate: (String, String) -> Unit,
     onDelete: () -> Unit
 ) {
-    var nameText by remember(unit.id, unit.displayName) { mutableStateOf(unit.displayName) }
-    var valueText by remember(unit.id, unit.valueInSqMeters) { mutableStateOf(unit.valueInSqMeters.toString()) }
+    // Ključ je samo ID: vrednost iz baze ne sme da prepisuje tekst koji korisnik trenutno kuca.
+    var nameText by remember(unit.id) { mutableStateOf(unit.displayName) }
+    var valueText by remember(unit.id) { mutableStateOf(unit.valueInSqMeters.toString()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

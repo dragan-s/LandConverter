@@ -53,34 +53,23 @@ class ConverterViewModel @Inject constructor(
     private val validNumber = Regex("""^(\d+([.,]\d*)?|[.,]\d+)$""")
 
     init {
+        // Jedini izvor istine za listu mera. Svaka promena u bazi (izmena, brisanje,
+        // dodavanje, promena države) osvežava i izabrane mere.
         viewModelScope.launch {
-            _countryFlow.collectLatest { country ->
-                val units = repository.getUnitsForCountry(country.id)
-                if (units.isNotEmpty()) {
-                    if (fromUnit == null || units.none { it.id == fromUnit?.id }) {
-                        fromUnit = units.firstOrNull()
-                    }
-                    if (toUnit == null || units.none { it.id == toUnit?.id }) {
-                        toUnit = units.getOrNull(1) ?: units.firstOrNull()
-                    }
-                }
-                recalculate()
-            }
+            availableUnits.collect { units -> syncSelection(units) }
         }
+    }
 
-        viewModelScope.launch {
-            availableUnits.collect { units ->
-                if (units.isNotEmpty()) {
-                    if (fromUnit == null || units.none { it.id == fromUnit?.id }) {
-                        fromUnit = units.firstOrNull()
-                    }
-                    if (toUnit == null || units.none { it.id == toUnit?.id }) {
-                        toUnit = units.getOrNull(1) ?: units.firstOrNull()
-                    }
-                }
-                recalculate()
-            }
-        }
+    /**
+     * Izabrane mere se uvek zamenjuju svežim entitetima iz liste (po ID-u), da konverzija
+     * ne bi koristila staru vrednost ili naziv nakon izmene na ekranu "Upravljaj merama".
+     * Ako izabrane mere više nema (obrisana je ili je promenjena država), bira se podrazumevana.
+     */
+    private fun syncSelection(units: List<LandUnitEntity>) {
+        if (units.isEmpty()) return
+        fromUnit = units.firstOrNull { it.id == fromUnit?.id } ?: units.first()
+        toUnit = units.firstOrNull { it.id == toUnit?.id } ?: units.getOrNull(1) ?: units.first()
+        recalculate()
     }
 
     fun onInputChange(value: String) {
