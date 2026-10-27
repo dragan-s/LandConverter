@@ -9,6 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+private const val DULUM_SQM = 1000.0
+private const val MOTIKA_SQM = 800.0
+
 @Database(entities = [LandUnitEntity::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -74,35 +77,35 @@ abstract class AppDatabase : RoomDatabase() {
         private fun getDefaultUnitsForCountry(countryCode: String): List<LandUnitEntity> {
             return when (countryCode) {
                 "ba" -> listOf(
-                    LandUnitEntity(countryCode = "ba", unitId = "dulum", displayName = "Dulum", valueInSqMeters = 1000.0, isSystem = false),
-                    LandUnitEntity(countryCode = "ba", unitId = "motika", displayName = "Motika", valueInSqMeters = 800.0, isSystem = false),
+                    LandUnitEntity(countryCode = "ba", unitId = "dulum", displayName = "Dulum", valueInSqMeters = DULUM_SQM, isSystem = false),
+                    LandUnitEntity(countryCode = "ba", unitId = "motika", displayName = "Motika", valueInSqMeters = MOTIKA_SQM, isSystem = false),
                     LandUnitEntity(countryCode = "ba", unitId = "lanac", displayName = "Lanac", valueInSqMeters = 7193.3, isSystem = false),
                     LandUnitEntity(countryCode = "ba", unitId = "jutro_ral", displayName = "Jutro (ral)", valueInSqMeters = 5754.64, isSystem = false)
                 )
                 "rs" -> listOf(
-                    LandUnitEntity(countryCode = "rs", unitId = "dulum", displayName = "Dulum", valueInSqMeters = 1000.0, isSystem = false),
-                    LandUnitEntity(countryCode = "rs", unitId = "motika", displayName = "Motika", valueInSqMeters = 800.0, isSystem = false),
+                    LandUnitEntity(countryCode = "rs", unitId = "dulum", displayName = "Dulum", valueInSqMeters = DULUM_SQM, isSystem = false),
+                    LandUnitEntity(countryCode = "rs", unitId = "motika", displayName = "Motika", valueInSqMeters = MOTIKA_SQM, isSystem = false),
                     LandUnitEntity(countryCode = "rs", unitId = "ralo", displayName = "Ralo", valueInSqMeters = 2878.0, isSystem = false),
                     LandUnitEntity(countryCode = "rs", unitId = "ralo_dan_oranja", displayName = "Ralo (dan oranja)", valueInSqMeters = 4000.0, isSystem = false),
                     LandUnitEntity(countryCode = "rs", unitId = "lanac", displayName = "Lanac", valueInSqMeters = 7192.0, isSystem = false),
                     LandUnitEntity(countryCode = "rs", unitId = "jutro_ral", displayName = "Jutro (ral)", valueInSqMeters = 5754.64, isSystem = false)
                 )
                 "me" -> listOf(
-                    LandUnitEntity(countryCode = "me", unitId = "dulum", displayName = "Dulum", valueInSqMeters = 1000.0, isSystem = false),
-                    LandUnitEntity(countryCode = "me", unitId = "motika", displayName = "Motika", valueInSqMeters = 800.0, isSystem = false),
+                    LandUnitEntity(countryCode = "me", unitId = "dulum", displayName = "Dulum", valueInSqMeters = DULUM_SQM, isSystem = false),
+                    LandUnitEntity(countryCode = "me", unitId = "motika", displayName = "Motika", valueInSqMeters = MOTIKA_SQM, isSystem = false),
                     LandUnitEntity(countryCode = "me", unitId = "ralo", displayName = "Ralo", valueInSqMeters = 1820.0, isSystem = false),
                     LandUnitEntity(countryCode = "me", unitId = "lanac", displayName = "Lanac", valueInSqMeters = 7193.3, isSystem = false),
                     LandUnitEntity(countryCode = "me", unitId = "jutro_ral", displayName = "Jutro (ral)", valueInSqMeters = 5754.64, isSystem = false)
                 )
                 "mk" -> listOf(
-                    LandUnitEntity(countryCode = "mk", unitId = "dulum", displayName = "Дулум", valueInSqMeters = 1000.0, isSystem = false),
-                    LandUnitEntity(countryCode = "mk", unitId = "motika", displayName = "Мотика", valueInSqMeters = 800.0, isSystem = false),
+                    LandUnitEntity(countryCode = "mk", unitId = "dulum", displayName = "Дулум", valueInSqMeters = DULUM_SQM, isSystem = false),
+                    LandUnitEntity(countryCode = "mk", unitId = "motika", displayName = "Мотика", valueInSqMeters = MOTIKA_SQM, isSystem = false),
                     LandUnitEntity(countryCode = "mk", unitId = "ralo", displayName = "Рало", valueInSqMeters = 1600.0, isSystem = false),
                     LandUnitEntity(countryCode = "mk", unitId = "ralo_dan_oranja", displayName = "Рало (ден орање)", valueInSqMeters = 4000.0, isSystem = false)
                 )
                 "hr" -> listOf(
-                    LandUnitEntity(countryCode = "hr", unitId = "dulum", displayName = "Dulum", valueInSqMeters = 1000.0, isSystem = false),
-                    LandUnitEntity(countryCode = "hr", unitId = "motika", displayName = "Motika", valueInSqMeters = 800.0, isSystem = false),
+                    LandUnitEntity(countryCode = "hr", unitId = "dulum", displayName = "Dulum", valueInSqMeters = DULUM_SQM, isSystem = false),
+                    LandUnitEntity(countryCode = "hr", unitId = "motika", displayName = "Motika", valueInSqMeters = MOTIKA_SQM, isSystem = false),
                     LandUnitEntity(countryCode = "hr", unitId = "jutro_ral", displayName = "Jutro (ral)", valueInSqMeters = 5754.64, isSystem = false)
                 )
                 else -> emptyList()

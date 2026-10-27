@@ -36,9 +36,17 @@ class ConverterViewModel @Inject constructor(
 
     private val _countryFlow = MutableStateFlow(selectedCountry)
 
-    val availableUnits: StateFlow<List<LandUnitEntity>> = _countryFlow.flatMapLatest { country ->
-        repository.observeUnitsForCountry(country.id)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val availableUnits: StateFlow<List<LandUnitEntity>> =
+        _countryFlow
+            .flatMapLatest { country ->
+                repository.observeUnitsForCountry(country.id)
+                    .onStart { emit(emptyList()) }
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
 
     var fromUnit: LandUnitEntity? by mutableStateOf(null)
         private set
@@ -67,8 +75,29 @@ class ConverterViewModel @Inject constructor(
      */
     private fun syncSelection(units: List<LandUnitEntity>) {
         if (units.isEmpty()) return
-        fromUnit = units.firstOrNull { it.id == fromUnit?.id } ?: units.first()
-        toUnit = units.firstOrNull { it.id == toUnit?.id } ?: units.getOrNull(1) ?: units.first()
+
+        // Nikada ne prihvataj jedinice druge države.
+        val currentUnits = units.filter {
+            it.countryCode == selectedCountry.id
+        }
+
+        if (currentUnits.isEmpty()) {
+            fromUnit = null
+            toUnit = null
+            inputError = null
+            resultAmount = "0"
+            return
+        }
+
+        // Zadrži izbor ako jedinica i dalje postoji.
+        // U suprotnom izaberi podrazumevanu jedinicu.
+        fromUnit = currentUnits.firstOrNull {
+            it.id == fromUnit?.id
+        } ?: currentUnits.first()
+
+        toUnit = currentUnits.firstOrNull {
+            it.id == toUnit?.id
+        } ?: currentUnits.getOrNull(1) ?: currentUnits.first()
         recalculate()
     }
 
@@ -82,19 +111,33 @@ class ConverterViewModel @Inject constructor(
     }
 
     fun onFromUnitChange(unit: LandUnitEntity) {
+        if (unit.countryCode != selectedCountry.id) return
+        if (availableUnits.value.none { it.id == unit.id }) return
         fromUnit = unit
         recalculateNow()
     }
 
     fun onToUnitChange(unit: LandUnitEntity) {
+        if (unit.countryCode != selectedCountry.id) return
+        if (availableUnits.value.none { it.id == unit.id }) return
         toUnit = unit
         recalculateNow()
     }
 
     fun onCountryChange(country: BalkanCountry) {
+        if (selectedCountry.id == country.id) return
+
+        debounceJob?.cancel()
         selectedCountry = country
+
+        // Ukloni izbore prethodne države odmah.
+        fromUnit = null
+        toUnit = null
+        inputError = null
+        resultAmount = "0"
+
+        // Pokreni učitavanje jedinica nove države.
         _countryFlow.value = country
-        recalculateNow()
     }
 
     private fun recalculateNow() {
@@ -105,21 +148,37 @@ class ConverterViewModel @Inject constructor(
     private fun recalculate() {
         val from = fromUnit
         val to = toUnit
-        if (from == null || to == null) {
+        if (from == null || to == null || from.countryCode != selectedCountry.id ||
+            to.countryCode != selectedCountry.id
+        ) {
             inputError = null
             resultAmount = "0"
             return
         }
 
-        when (val result = convertAreaUseCase(inputAmount, from.valueInSqMeters, to.valueInSqMeters)) {
+        // Koristi samo jedinice koje su još u aktuelnoj listi.
+        val currentUnits = availableUnits.value
+        if (
+            currentUnits.none { it.id == from.id } ||
+            currentUnits.none { it.id == to.id }
+        ) {
+            inputError = null
+            resultAmount = "0"
+            return
+        }
+
+        when (val result =
+            convertAreaUseCase(inputAmount, from.valueInSqMeters, to.valueInSqMeters)) {
             is ConversionResult.Success -> {
                 inputError = null
                 resultAmount = result.formatted
             }
+
             ConversionResult.Empty -> {
                 inputError = null
                 resultAmount = "0"
             }
+
             ConversionResult.InvalidInput -> {
                 inputError = uiStrings.errorInvalidNumber
                 resultAmount = "0"
