@@ -70,6 +70,12 @@ class ManageUnitsViewModel @Inject constructor(
         }
     }
 
+    fun deleteUnit(unitId: Long) {
+        viewModelScope.launch {
+            repository.deleteUnit(unitId)
+        }
+    }
+
     fun addNewUnit(): Boolean {
         val name = newUnitName.trim()
         val value = newUnitValue.replace(',', '.').toDoubleOrNull()

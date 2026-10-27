@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,8 +25,10 @@ fun ManageUnitsScreen(
 ) {
     val selectedCountry = viewModel.selectedCountry
     val units by viewModel.units.collectAsState()
+    val editableUnits = remember(units) { units.filter { !it.isSystem } }
 
     var countryMenuExpanded by remember { mutableStateOf(false) }
+    var unitToDelete by remember { mutableStateOf<LandUnitEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -49,99 +52,150 @@ fun ManageUnitsScreen(
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp),
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Country Selection Dropdown
-            ExposedDropdownMenuBox(
-                expanded = countryMenuExpanded,
-                onExpandedChange = { countryMenuExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedCountry.displayName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Država / sistem") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryMenuExpanded) },
-                    modifier = Modifier
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
+            item {
+                ExposedDropdownMenuBox(
                     expanded = countryMenuExpanded,
-                    onDismissRequest = { countryMenuExpanded = false }
+                    onExpandedChange = { countryMenuExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    viewModel.countries.forEach { country ->
-                        DropdownMenuItem(
-                            text = { Text(country.displayName) },
-                            onClick = {
-                                viewModel.onCountrySelected(country)
-                                countryMenuExpanded = false
-                            }
-                        )
+                    OutlinedTextField(
+                        value = selectedCountry.displayName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Država / sistem") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryMenuExpanded) },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = countryMenuExpanded,
+                        onDismissRequest = { countryMenuExpanded = false }
+                    ) {
+                        viewModel.countries.forEach { country ->
+                            DropdownMenuItem(
+                                text = { Text(country.displayName) },
+                                onClick = {
+                                    viewModel.onCountrySelected(country)
+                                    countryMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
             // Add New Unit Form
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Text("Dodaj novu meru za ${selectedCountry.displayName}", style = MaterialTheme.typography.titleMedium)
-
-                    OutlinedTextField(
-                        value = viewModel.newUnitName,
-                        onValueChange = viewModel::onNewUnitNameChange,
-                        label = { Text("Naziv mere (npr. Motika)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = viewModel.newUnitValue,
-                        onValueChange = viewModel::onNewUnitValueChange,
-                        label = { Text("Vrednost u m²") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    viewModel.errorMessage?.let { error ->
-                        Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-
-                    Button(
-                        onClick = { viewModel.addNewUnit() },
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Dodaj meru")
+                        Text(
+                            "Dodaj novu meru za ${selectedCountry.displayName}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        OutlinedTextField(
+                            value = viewModel.newUnitName,
+                            onValueChange = viewModel::onNewUnitNameChange,
+                            label = { Text("Naziv mere (npr. Motika)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = viewModel.newUnitValue,
+                            onValueChange = viewModel::onNewUnitValueChange,
+                            label = { Text("Vrednost u m²") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        viewModel.errorMessage?.let { error ->
+                            Text(
+                                error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.addNewUnit() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Dodaj meru")
+                        }
                     }
                 }
             }
 
-            Text("Postojeće mere", style = MaterialTheme.typography.titleMedium)
+            // Section Header
+            item {
+                Text("Postojeće mere", style = MaterialTheme.typography.titleMedium)
+            }
 
-            // Existing Units List
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(units, key = { it.id }) { unit ->
-                    UnitEditRow(unit = unit, onUpdate = { name, value ->
-                        viewModel.updateExistingUnit(unit, name, value)
-                    })
+            // Existing Units List (excluding system units m2, ar, ha)
+            if (editableUnits.isEmpty()) {
+                item {
+                    Text(
+                        "Nema prilagođenih mera za ovu državu.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                items(editableUnits, key = { it.id }) { unit ->
+                    UnitEditRow(
+                        unit = unit,
+                        onUpdate = { name, value ->
+                            viewModel.updateExistingUnit(unit, name, value)
+                        },
+                        onDelete = {
+                            unitToDelete = unit
+                        }
+                    )
                 }
             }
+        }
+
+        // Confirmation Dialog for Unit Deletion
+        unitToDelete?.let { unit ->
+            AlertDialog(
+                onDismissRequest = { unitToDelete = null },
+                title = { Text("Potvrda brisanja") },
+                text = {
+                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Izmena će biti vidljiva nakon što kliknete na dugme Sačuvaj.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteUnit(unit.id)
+                            unitToDelete = null
+                        }
+                    ) {
+                        Text("Obriši", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { unitToDelete = null }) {
+                        Text("Otkaži")
+                    }
+                }
+            )
         }
     }
 }
@@ -149,16 +203,15 @@ fun ManageUnitsScreen(
 @Composable
 private fun UnitEditRow(
     unit: LandUnitEntity,
-    onUpdate: (String, String) -> Unit
+    onUpdate: (String, String) -> Unit,
+    onDelete: () -> Unit
 ) {
     var nameText by remember(unit.id, unit.displayName) { mutableStateOf(unit.displayName) }
     var valueText by remember(unit.id, unit.valueInSqMeters) { mutableStateOf(unit.valueInSqMeters.toString()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (unit.isSystem) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -172,10 +225,9 @@ private fun UnitEditRow(
                 value = nameText,
                 onValueChange = {
                     nameText = it
-                    if (!unit.isSystem) onUpdate(it, valueText)
+                    onUpdate(it, valueText)
                 },
                 label = { Text("Naziv") },
-                enabled = !unit.isSystem,
                 singleLine = true,
                 modifier = Modifier.weight(1f)
             )
@@ -184,14 +236,21 @@ private fun UnitEditRow(
                 value = valueText,
                 onValueChange = {
                     valueText = it
-                    if (!unit.isSystem) onUpdate(nameText, it)
+                    onUpdate(nameText, it)
                 },
                 label = { Text("m²") },
-                enabled = !unit.isSystem,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.width(120.dp)
+                modifier = Modifier.width(110.dp)
             )
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Obriši meru",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
