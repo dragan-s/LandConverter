@@ -1,8 +1,11 @@
 package com.example.landconverter.presentation.manage
 
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,7 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.landconverter.data.local.LandUnitEntity
@@ -200,6 +206,80 @@ fun ManageUnitsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MarqueeOutlinedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: @Composable (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val enabled = true
+    val isError = false
+    val colors = OutlinedTextFieldDefaults.colors()
+    val textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
+    val textMeasurer = rememberTextMeasurer()
+
+    var containerWidthPx by remember { mutableIntStateOf(0) }
+
+    val isOverflowing = remember(value, textStyle, containerWidthPx) {
+        if (containerWidthPx <= 0 || value.isEmpty()) {
+            false
+        } else {
+            val measuredTextWidth = textMeasurer.measure(
+                text = value,
+                style = textStyle,
+                maxLines = 1
+            ).size.width
+            measuredTextWidth > containerWidthPx
+        }
+    }
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+        interactionSource = interactionSource,
+        textStyle = textStyle,
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = {
+                    Box(
+                        modifier = Modifier
+                            .onSizeChanged { containerWidthPx = it.width }
+                            .then(
+                                if (isOverflowing) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier
+                            )
+                    ) {
+                        innerTextField()
+                    }
+                },
+                enabled = enabled,
+                singleLine = true,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = label,
+                colors = colors,
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        shape = OutlinedTextFieldDefaults.shape
+                    )
+                }
+            )
+        }
+    )
+}
+
 @Composable
 private fun UnitEditRow(
     unit: LandUnitEntity,
@@ -221,25 +301,23 @@ private fun UnitEditRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
+            MarqueeOutlinedTextField(
                 value = nameText,
                 onValueChange = {
                     nameText = it
                     onUpdate(it, valueText)
                 },
                 label = { Text("Naziv") },
-                singleLine = true,
                 modifier = Modifier.weight(1f)
             )
 
-            OutlinedTextField(
+            MarqueeOutlinedTextField(
                 value = valueText,
                 onValueChange = {
                     valueText = it
                     onUpdate(nameText, it)
                 },
                 label = { Text("m²") },
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.width(110.dp)
             )
