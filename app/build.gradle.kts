@@ -31,6 +31,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin {
+        jvmToolchain(17)
         compilerOptions {
             jvmTarget = JvmTarget.JVM_17
         }
@@ -53,4 +54,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }

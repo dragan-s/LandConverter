@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.example.landconverter.presentation.navigation.LandConverterNavGraph
 import com.example.landconverter.presentation.theme.LandConverterTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -14,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LandConverterTheme {
-                ConverterScreen()
+                LandConverterNavGraph()
             }
         }
     }

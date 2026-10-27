@@ -1,43 +1,32 @@
 package com.example.landconverter.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConverterScreen(viewModel: ConverterViewModel = viewModel()) {
+fun ConverterScreen(
+    onNavigateToManageUnits: (String) -> Unit,
+    viewModel: ConverterViewModel = hiltViewModel()
+) {
     val strings = viewModel.uiStrings
     val country = viewModel.selectedCountry
     val error = viewModel.inputError
+    val availableUnits by viewModel.availableUnits.collectAsState()
+
+    val fromUnit = viewModel.fromUnit
+    val toUnit = viewModel.toUnit
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -54,7 +43,7 @@ fun ConverterScreen(viewModel: ConverterViewModel = viewModel()) {
             DropdownField(
                 label = strings.countryLabel,
                 selectedText = country.displayName,
-                options = viewModel.options.countries,
+                options = viewModel.countries,
                 optionLabel = { it.displayName },
                 onOptionSelected = viewModel::onCountryChange
             )
@@ -72,27 +61,38 @@ fun ConverterScreen(viewModel: ConverterViewModel = viewModel()) {
 
             DropdownField(
                 label = strings.fromUnitLabel,
-                selectedText = viewModel.fromUnit.getLocalizedName(country),
-                options = viewModel.availableUnits,
-                optionLabel = { it.getLocalizedName(country) },
+                selectedText = fromUnit?.displayName ?: "",
+                options = availableUnits,
+                optionLabel = { it.displayName },
                 onOptionSelected = viewModel::onFromUnitChange
             )
 
             DropdownField(
                 label = strings.toUnitLabel,
-                selectedText = viewModel.toUnit.getLocalizedName(country),
-                options = viewModel.availableUnits,
-                optionLabel = { it.getLocalizedName(country) },
+                selectedText = toUnit?.displayName ?: "",
+                options = availableUnits,
+                optionLabel = { it.displayName },
                 onOptionSelected = viewModel::onToUnitChange
             )
 
             ResultCard(
                 title = strings.resultTitle,
-                expression = if (error == null) {
-                    "${viewModel.inputAmount.ifBlank { "0" }} ${viewModel.fromUnit.getLocalizedName(country)} ="
+                expression = if (error == null && fromUnit != null) {
+                    "${viewModel.inputAmount.ifBlank { "0" }} ${fromUnit.displayName} ="
                 } else "—",
-                result = "${viewModel.resultAmount} ${viewModel.toUnit.getLocalizedName(country)}"
+                result = if (toUnit != null) "${viewModel.resultAmount} ${toUnit.displayName}" else viewModel.resultAmount
             )
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { onNavigateToManageUnits(country.id) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Upravljaj merama")
+            }
         }
     }
 }
