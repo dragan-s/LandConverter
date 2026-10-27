@@ -8,19 +8,20 @@ import androidx.lifecycle.viewModelScope
 import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
 import com.example.landconverter.data.repository.LandUnitRepository
+import com.example.landconverter.domain.usecase.ConversionResult
+import com.example.landconverter.domain.usecase.ConvertAreaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class ConverterViewModel @Inject constructor(
-    private val repository: LandUnitRepository
+    private val repository: LandUnitRepository,
+    private val convertAreaUseCase: ConvertAreaUseCase
 ) : ViewModel() {
 
     var inputAmount by mutableStateOf("1")
@@ -50,7 +51,6 @@ class ConverterViewModel @Inject constructor(
         private set
 
     private var debounceJob: Job? = null
-    private val validNumber = Regex("""^(\d+([.,]\d*)?|[.,]\d+)$""")
 
     init {
         // Jedini izvor istine za listu mera. Svaka promena u bazi (izmena, brisanje,
@@ -103,25 +103,6 @@ class ConverterViewModel @Inject constructor(
     }
 
     private fun recalculate() {
-        val trimmed = inputAmount.trim()
-        if (trimmed.isEmpty()) {
-            inputError = null
-            resultAmount = "0"
-            return
-        }
-        if (!validNumber.matches(trimmed)) {
-            inputError = uiStrings.errorInvalidNumber
-            resultAmount = "0"
-            return
-        }
-
-        val value = trimmed.replace(',', '.').toDoubleOrNull()
-        if (value == null || !value.isFinite()) {
-            inputError = uiStrings.errorInvalidNumber
-            resultAmount = "0"
-            return
-        }
-
         val from = fromUnit
         val to = toUnit
         if (from == null || to == null) {
@@ -130,23 +111,21 @@ class ConverterViewModel @Inject constructor(
             return
         }
 
-        val valueInSqMeters = value * from.valueInSqMeters
-        val res = valueInSqMeters / to.valueInSqMeters
-        if (!res.isFinite()) {
-            inputError = uiStrings.errorInvalidNumber
-            resultAmount = "0"
-            return
+        when (val result = convertAreaUseCase(inputAmount, from.valueInSqMeters, to.valueInSqMeters)) {
+            is ConversionResult.Success -> {
+                inputError = null
+                resultAmount = result.formatted
+            }
+            ConversionResult.Empty -> {
+                inputError = null
+                resultAmount = "0"
+            }
+            ConversionResult.InvalidInput -> {
+                inputError = uiStrings.errorInvalidNumber
+                resultAmount = "0"
+            }
         }
-
-        inputError = null
-        resultAmount = format(res)
     }
-
-    private fun format(value: Double): String =
-        BigDecimal.valueOf(value)
-            .setScale(4, RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString()
 
     private companion object {
         const val INPUT_DEBOUNCE_MS = 300L

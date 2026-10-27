@@ -1,55 +1,64 @@
 # LandConverter
 
-**LandConverter** is a modern Android application built with Jetpack Compose that allows users to convert land area measurements between modern standard SI units and traditional regional land units used across the Balkan countries.
+**LandConverter** is a modern Android application built with **Jetpack Compose**, **Room Database**, and **Hilt** that allows users to convert land area measurements between standard SI units (`m²`, `ar`, `ha`) and traditional regional land units (*Dulum*, *Motika*, *Ralo*, *Lanac*, *Jutro / Ral*) used across Balkan countries.
 
 ---
 
-## Features
+##  Key Features
 
-- **Traditional & Modern Unit Conversions**: Convert between square meters (`m²`), ares (`a`), hectares (`ha`), and traditional regional units such as *Dulum*, *Motika*, *Ralo*, *Lanac*, and *Jutro / Ral*.
-- **Regional Variations**: Traditional land units vary significantly by region in practice. Selecting a specific country/region automatically applies the correct local conversion formula and localized terminology.
-- **Supported Regions**:
-  - Serbia (`rs`)
-  - Bosnia and Herzegovina (`ba`)
-  - Croatia (`hr`)
-  - Montenegro (`me`)
-  - North Macedonia (`mk`)
-- **Real-time & Debounced Input**: Instant UI updates with debounced recalculation for smooth user experience.
+- **Standard & Traditional Unit Conversion**: Seamlessly convert between square meters (`m²`), ares (`a`), hectares (`ha`), and regional traditional units.
+- **Regional Variations Support**: Pre-configured regional conversion formulas and localized terminology for:
+  -  **Serbia** (`rs`)
+  -  **Bosnia and Herzegovina** (`ba`)
+  -  **Croatia** (`hr`)
+  -  **Montenegro** (`me`)
+  -  **North Macedonia** (`mk`)
+- **Custom Unit Management**: Dedicated **Manage Units** screen allowing users to edit unit values or add custom regional units per country.
+- **Offline Persistence**: Room database pre-populated with historical default units with full local database persistence for custom edits.
+- **Modern Material 3 UI**: Clean, edge-to-edge UI with smart text marquee animations for long unit names, full-screen scrolling, and deletion confirmation dialogs.
 
 ---
 
-## Tech Stack & Architecture
+##  Tech Stack & Architecture
 
-- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with [Material 3](https://m3.material.io/).
-- **Architecture**: Clean Architecture / MVVM pattern separating concerns into `data`, `domain`, and `presentation` layers.
+- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with [Material 3](https://m3.material.io/) & Navigation Compose.
+- **Architecture**: Clean Architecture / MVVM (Model-View-ViewModel) pattern.
+- **Local Database**: [Room Persistence Library](https://developer.android.com/training/data-storage/room) v2.8.5 with [KSP2](https://kotlinlang.org/docs/ksp-overview.html) support.
 - **Dependency Injection**: [Hilt](https://dagger.dev/hilt/).
-- **Concurrency**: Kotlin Coroutines and `StateFlow`.
-- **Language**: Kotlin.
+- **Concurrency & Reactive Data**: Kotlin Coroutines, `Flow`, and `StateFlow`.
+- **Language & Compiler**: Kotlin 2.1 with Gradle 9+.
 
 ---
 
-## Project Structure
+##  Project Structure
 
 ```text
 com.example.landconverter/
 ├── data/
-│   ├── model/         # Data models (BalkanCountry, LandUnit, ConverterOptions)
-│   └── repository/    # ConversionRepository for area calculation logic
+│   ├── local/             # Room Database, DAO (LandUnitDao), and Entity (LandUnitEntity)
+│   ├── model/             # Data models (BalkanCountry)
+│   └── repository/        # LandUnitRepository for database queries and persistence
 ├── domain/
-│   └── usecase/       # Business logic (ConvertAreaUseCase)
+│   └── usecase/           # Business logic (ConvertAreaUseCase)
 ├── presentation/
-│   ├── theme/         # Material 3 theme definitions
-│   ├── ConverterScreen.kt       # Composable UI screen
-│   ├── ConverterViewModel.kt    # ViewModel managing UI state and user actions
-│   └── CountryStringProvider.kt # Presentation-layer UI string localization provider
+│   ├── manage/            # Unit management feature (ManageUnitsScreen, ManageUnitsViewModel)
+│   ├── navigation/        # Compose Navigation graph (NavGraph)
+│   ├── theme/             # Material 3 color schemes and typography
+│   ├── ConverterScreen.kt # Primary conversion screen
+│   ├── ConverterViewModel.kt
+│   └── CountryStringProvider.kt # UI localization provider
 └── di/
-    └── AppModule.kt   # Hilt dependency injection modules
+    ├── AppModule.kt       # Application-level Hilt module
+    └── DatabaseModule.kt  # Room Database Hilt module
 ```
 
 ---
 
-## Getting Started
+## ️ Getting Started
 
-1. Clone or open the project in **Android Studio** (Koala or newer recommended).
-2. Sync the project with Gradle files.
-3. Run the app on an Android emulator or physical device.
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/your-username/LandConverter.git
+   ```
+2. **Open in Android Studio**: Open the project in Android Studio (Ladybug / 2024.2+ recommended).
+3. **Build & Run**: Sync Gradle and run `:app` on an Android emulator or physical device (Android 7.0 / API 24+).

@@ -4,7 +4,6 @@ sealed class BalkanCountry(
     val id: String,
     val displayName: String
 ) {
-    //data object StandardSI : BalkanCountry("si", "SI standard")
     data object BosniaAndHerzegovina : BalkanCountry("ba", "Bosna i Hercegovina")
     data object Serbia : BalkanCountry("rs", "Srbija")
     data object Montenegro : BalkanCountry("me", "Crna Gora")
@@ -12,7 +11,6 @@ sealed class BalkanCountry(
     data object Croatia : BalkanCountry("hr", "Hrvatska")
 
     companion object {
-        // Getter (a ne polje) da se izbegne problem redosleda inicijalizacije sealed objekata.
         val all: List<BalkanCountry>
             get() = listOf(BosniaAndHerzegovina, Serbia, Montenegro, NorthMacedonia, Croatia)
     }

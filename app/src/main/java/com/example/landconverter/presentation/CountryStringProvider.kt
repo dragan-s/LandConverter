@@ -15,15 +15,6 @@ data class AppUiStrings(
 object CountryStringProvider {
     fun getStrings(country: BalkanCountry): AppUiStrings {
         return when (country) {
-            /*is BalkanCountry.StandardSI -> AppUiStrings(
-                appTitle = "Land Area Converter",
-                amountLabel = "Amount",
-                fromUnitLabel = "From unit",
-                toUnitLabel = "To unit",
-                countryLabel = "Country / system",
-                resultTitle = "Result",
-                errorInvalidNumber = "Enter a valid positive number"
-            )*/
             is BalkanCountry.BosniaAndHerzegovina -> AppUiStrings(
                 appTitle = "Konvertor površine zemljišta",
                 amountLabel = "Količina",

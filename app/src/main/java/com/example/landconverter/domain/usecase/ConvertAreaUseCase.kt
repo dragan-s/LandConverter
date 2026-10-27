@@ -1,8 +1,5 @@
 package com.example.landconverter.domain.usecase
 
-import com.example.landconverter.data.model.BalkanCountry
-import com.example.landconverter.data.model.LandUnit
-import com.example.landconverter.data.repository.ConversionRepository
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
@@ -13,17 +10,19 @@ sealed interface ConversionResult {
     data object InvalidInput : ConversionResult
 }
 
-class ConvertAreaUseCase @Inject constructor(
-    private val repository: ConversionRepository
-) {
+/**
+ * Čista poslovna logika: validira unos, konvertuje preko kvadratnog metra
+ * i formatira rezultat. Ne zna ništa o bazi ni o državama; prima samo vrednosti mera u m².
+ */
+class ConvertAreaUseCase @Inject constructor() {
+
     // Pozitivan broj: "12", "12.5", "12,5", "12." ili ".5". Bez znaka, slova i više separatora.
     private val validNumber = Regex("""^(\d+([.,]\d*)?|[.,]\d+)$""")
 
     operator fun invoke(
         input: String,
-        from: LandUnit,
-        to: LandUnit,
-        country: BalkanCountry
+        fromUnitSqMeters: Double,
+        toUnitSqMeters: Double
     ): ConversionResult {
         val trimmed = input.trim()
         if (trimmed.isEmpty()) return ConversionResult.Empty
@@ -33,7 +32,7 @@ class ConvertAreaUseCase @Inject constructor(
             ?: return ConversionResult.InvalidInput
         if (!value.isFinite()) return ConversionResult.InvalidInput
 
-        val result = repository.convert(value, from, to, country)
+        val result = value * fromUnitSqMeters / toUnitSqMeters
         if (!result.isFinite()) return ConversionResult.InvalidInput
 
         return ConversionResult.Success(format(result))
