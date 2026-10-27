@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
 import com.example.landconverter.data.repository.LandUnitRepository
+import com.example.landconverter.data.repository.SaveUnitResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,7 +67,7 @@ class ManageUnitsViewModel @Inject constructor(
         if (newName.isBlank() || value == null || value <= 0) return
         viewModelScope.launch {
             val updated = unit.copy(displayName = newName.trim(), valueInSqMeters = value)
-            repository.updateUnit(updated)
+            repository.updateUserUnit(updated)
         }
     }
 
@@ -91,16 +92,25 @@ class ManageUnitsViewModel @Inject constructor(
 
         viewModelScope.launch {
             val unitId = "custom_" + System.currentTimeMillis()
-            repository.saveUnit(
+            val result = repository.saveUserUnit(
                 countryCode = selectedCountry.id,
                 unitId = unitId,
                 displayName = name,
-                valueInSqMeters = value,
-                isSystem = false
+                valueInSqMeters = value
             )
-            newUnitName = ""
-            newUnitValue = ""
-            errorMessage = null
+            when (result) {
+                SaveUnitResult.Saved -> {
+                    newUnitName = ""
+                    newUnitValue = ""
+                    errorMessage = null
+                }
+                SaveUnitResult.Duplicate -> {
+                    errorMessage = "Mera sa ovim ID-om ili nazivom već postoji."
+                }
+                SaveUnitResult.Invalid -> {
+                    errorMessage = "Unesite ispravne podatke za novu meru."
+                }
+            }
         }
         return true
     }

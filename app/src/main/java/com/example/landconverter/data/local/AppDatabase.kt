@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,29 +13,10 @@ import kotlinx.coroutines.launch
 private const val DULUM_SQM = 1000.0
 private const val MOTIKA_SQM = 800.0
 
-@Database(entities = [LandUnitEntity::class], version = 1, exportSchema = false)
+@Database(entities = [LandUnitEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun landUnitDao(): LandUnitDao
-
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "land_converter_database"
-                )
-                    .addCallback(DatabaseCallback(scope))
-                    .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
 
     private class DatabaseCallback(
         private val scope: CoroutineScope
@@ -53,9 +35,9 @@ abstract class AppDatabase : RoomDatabase() {
 
             for (code in countries) {
                 // 1. System units (common for all countries)
-                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "sqm", displayName = getSystemUnitName("sqm", code), valueInSqMeters = 1.0, isSystem = true))
-                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "ar", displayName = getSystemUnitName("ar", code), valueInSqMeters = 100.0, isSystem = true))
-                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "ha", displayName = getSystemUnitName("ha", code), valueInSqMeters = 10000.0, isSystem = true))
+                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "sqm", displayName = getSystemUnitName("sqm", code), valueInSqMeters = 1.0, isSystem = true, sourceType = "BUILT_IN"))
+                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "ar", displayName = getSystemUnitName("ar", code), valueInSqMeters = 100.0, isSystem = true, sourceType = "BUILT_IN"))
+                dao.insertUnit(LandUnitEntity(countryCode = code, unitId = "ha", displayName = getSystemUnitName("ha", code), valueInSqMeters = 10000.0, isSystem = true, sourceType = "BUILT_IN"))
 
                 // 2. Country-specific default units
                 val defaultUnits = getDefaultUnitsForCountry(code)
@@ -112,4 +94,58 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
     }
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                ALTER TABLE land_units
+                ADD COLUMN sourceType TEXT NOT NULL
+                DEFAULT 'USER_DEFINED'
+                """.trimIndent()
+                )
+
+                // Fiksne sistemske mere za sve podržane države.
+                db.execSQL(
+                    """
+                UPDATE land_units
+                SET sourceType = 'BUILT_IN'
+                WHERE unitId IN ('sqm', 'ar', 'ha')
+                """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                CREATE UNIQUE INDEX IF NOT EXISTS
+                index_land_units_countryCode_unitId
+                ON land_units (countryCode, unitId)
+                """.trimIndent()
+                )
+            }
+        }
+
+        fun getDatabase(
+            context: Context,
+            scope: CoroutineScope
+        ): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "land_converter_database"
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .addCallback(DatabaseCallback(scope))
+                    .build()
+
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+
 }
