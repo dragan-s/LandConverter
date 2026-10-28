@@ -221,7 +221,7 @@ fun ManageUnitsScreen(
                 onDismissRequest = { unitToDelete = null },
                 title = { Text("Potvrda brisanja") },
                 text = {
-                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Brisanje je trajno i odmah se primenjuje.")
+                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Izmena će biti sačuvana tek kada pritisnete \"Sačuvaj\".")
                 },
                 confirmButton = {
                     TextButton(
