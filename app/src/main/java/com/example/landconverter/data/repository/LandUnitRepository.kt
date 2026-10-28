@@ -31,9 +31,9 @@ class LandUnitRepository @Inject constructor(
         return landUnitDao.observeUnitsForCountry(countryCode)
     }
 
-    suspend fun getUnitsForCountry(countryCode: String): List<LandUnitEntity> {
+    /*suspend fun getUnitsForCountry(countryCode: String): List<LandUnitEntity> {
         return landUnitDao.getUnitsForCountry(countryCode)
-    }
+    }*/
 
     suspend fun saveUserUnit(
         countryCode: String,

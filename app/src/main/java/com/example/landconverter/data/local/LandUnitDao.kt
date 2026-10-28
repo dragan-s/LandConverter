@@ -46,7 +46,4 @@ interface LandUnitDao {
 
     @Query("DELETE FROM land_units WHERE id = :id AND isSystem = 0")
     suspend fun deleteNonSystemUnit(id: Long): Int
-
-    @Query("SELECT COUNT(*) FROM land_units")
-    suspend fun getCount(): Int
 }
