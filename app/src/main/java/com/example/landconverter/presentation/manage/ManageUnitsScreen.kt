@@ -1,5 +1,6 @@
 package com.example.landconverter.presentation.manage
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -36,18 +37,25 @@ fun ManageUnitsScreen(
     var countryMenuExpanded by remember { mutableStateOf(false) }
     var unitToDelete by remember { mutableStateOf<LandUnitEntity?>(null) }
 
+    // Ako postoje nesačuvane izmene, napuštanje ekrana ili promena države traži potvrdu.
+    var pendingDiscard by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val requestLeave: (() -> Unit) -> Unit = { action ->
+        if (viewModel.hasUnsavedChanges) pendingDiscard = action else action()
+    }
+    BackHandler(enabled = viewModel.hasUnsavedChanges) { requestLeave(onNavigateBack) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Upravljaj merama") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { requestLeave(onNavigateBack) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Nazad")
                     }
                 },
                 actions = {
                     Button(
-                        onClick = { onNavigateBack() },
+                        onClick = { viewModel.saveChanges(onNavigateBack) },
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -90,8 +98,8 @@ fun ManageUnitsScreen(
                             DropdownMenuItem(
                                 text = { Text(country.displayName) },
                                 onClick = {
-                                    viewModel.onCountrySelected(country)
                                     countryMenuExpanded = false
+                                    requestLeave { viewModel.onCountrySelected(country) }
                                 }
                             )
                         }
@@ -165,10 +173,14 @@ fun ManageUnitsScreen(
                 }
             } else {
                 items(editableUnits, key = { it.id }) { unit ->
+                    val errors = viewModel.editErrors[unit.id]
                     UnitEditRow(
                         unit = unit,
-                        onUpdate = { name, value ->
-                            viewModel.updateExistingUnit(unit, name, value)
+                        nameError = errors?.nameError,
+                        valueError = errors?.valueError,
+                        draft = viewModel.drafts[unit.id],
+                        onChange = { name, value ->
+                            viewModel.onDraftChange(unit, name, value)
                         },
                         onDelete = {
                             unitToDelete = unit
@@ -178,13 +190,38 @@ fun ManageUnitsScreen(
             }
         }
 
+        // Potvrda odbacivanja nesačuvanih izmena
+        pendingDiscard?.let { action ->
+            AlertDialog(
+                onDismissRequest = { pendingDiscard = null },
+                title = { Text("Nesačuvane izmene") },
+                text = { Text("Imate izmene koje nisu sačuvane. Da li želite da ih odbacite?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.discardChanges()
+                            pendingDiscard = null
+                            action()
+                        }
+                    ) {
+                        Text("Odbaci", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDiscard = null }) {
+                        Text("Nastavi uređivanje")
+                    }
+                }
+            )
+        }
+
         // Confirmation Dialog for Unit Deletion
         unitToDelete?.let { unit ->
             AlertDialog(
                 onDismissRequest = { unitToDelete = null },
                 title = { Text("Potvrda brisanja") },
                 text = {
-                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Izmena će biti vidljiva nakon što kliknete na dugme Sačuvaj.")
+                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Brisanje je trajno i odmah se primenjuje.")
                 },
                 confirmButton = {
                     TextButton(
@@ -213,11 +250,12 @@ private fun MarqueeOutlinedTextField(
     onValueChange: (String) -> Unit,
     label: @Composable (() -> Unit)?,
     modifier: Modifier = Modifier,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false,
+    supportingText: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val enabled = true
-    val isError = false
     val colors = OutlinedTextFieldDefaults.colors()
     val textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
     val textMeasurer = rememberTextMeasurer()
@@ -265,6 +303,9 @@ private fun MarqueeOutlinedTextField(
                 interactionSource = interactionSource,
                 isError = isError,
                 label = label,
+                supportingText = if (supportingText != null) {
+                    { Text(supportingText) }
+                } else null,
                 colors = colors,
                 container = {
                     OutlinedTextFieldDefaults.Container(
@@ -283,12 +324,15 @@ private fun MarqueeOutlinedTextField(
 @Composable
 private fun UnitEditRow(
     unit: LandUnitEntity,
-    onUpdate: (String, String) -> Unit,
+    draft: UnitDraft?,
+    nameError: String?,
+    valueError: String?,
+    onChange: (name: String, value: String) -> Unit,
     onDelete: () -> Unit
 ) {
-    // Ključ je samo ID: vrednost iz baze ne sme da prepisuje tekst koji korisnik trenutno kuca.
-    var nameText by remember(unit.id) { mutableStateOf(unit.displayName) }
-    var valueText by remember(unit.id) { mutableStateOf(unit.valueInSqMeters.toString()) }
+    // Dok traje izmena prikazuje se nacrt, inače vrednosti iz baze.
+    val nameText = draft?.name ?: unit.displayName
+    val valueText = draft?.value ?: formatUnitValue(unit.valueInSqMeters)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -300,30 +344,28 @@ private fun UnitEditRow(
                 .padding(12.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             MarqueeOutlinedTextField(
                 value = nameText,
-                onValueChange = {
-                    nameText = it
-                    onUpdate(it, valueText)
-                },
+                onValueChange = { onChange(it, valueText) },
                 label = { Text("Naziv") },
+                isError = nameError != null,
+                supportingText = nameError,
                 modifier = Modifier.weight(1f)
             )
 
             MarqueeOutlinedTextField(
                 value = valueText,
-                onValueChange = {
-                    valueText = it
-                    onUpdate(nameText, it)
-                },
+                onValueChange = { onChange(nameText, it) },
                 label = { Text("m²") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = valueError != null,
+                supportingText = valueError,
                 modifier = Modifier.width(110.dp)
             )
 
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = onDelete, modifier = Modifier.padding(top = 4.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Obriši meru",
