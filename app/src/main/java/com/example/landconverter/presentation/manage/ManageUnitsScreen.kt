@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -17,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -81,7 +83,7 @@ fun ManageUnitsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = selectedCountry.displayName,
+                        value = "${selectedCountry.flagEmoji}  ${selectedCountry.displayName}",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Država / sistem") },
@@ -95,8 +97,17 @@ fun ManageUnitsScreen(
                         onDismissRequest = { countryMenuExpanded = false }
                     ) {
                         viewModel.countries.forEach { country ->
+                            val isSelected = country.id == selectedCountry.id
                             DropdownMenuItem(
-                                text = { Text(country.displayName) },
+                                text = {
+                                    Text(
+                                        text = "${country.flagEmoji}  ${country.displayName}",
+                                        style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyLarge
+                                    )
+                                },
+                                trailingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = "Izabrano", tint = MaterialTheme.colorScheme.primary) }
+                                } else null,
                                 onClick = {
                                     countryMenuExpanded = false
                                     requestLeave { viewModel.onCountrySelected(country) }

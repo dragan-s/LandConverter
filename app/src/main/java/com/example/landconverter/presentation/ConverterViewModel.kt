@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
+import com.example.landconverter.data.preferences.AppPreferences
 import com.example.landconverter.data.repository.LandUnitRepository
 import com.example.landconverter.domain.usecase.ConversionResult
 import com.example.landconverter.domain.usecase.ConvertAreaUseCase
@@ -21,8 +22,17 @@ import kotlin.time.Duration.Companion.milliseconds
 @HiltViewModel
 class ConverterViewModel @Inject constructor(
     private val repository: LandUnitRepository,
-    private val convertAreaUseCase: ConvertAreaUseCase
+    private val convertAreaUseCase: ConvertAreaUseCase,
+    private val appPreferences: AppPreferences
 ) : ViewModel() {
+
+    var showWelcomeDialog by mutableStateOf(appPreferences.isFirstRun)
+        private set
+
+    fun dismissWelcomeDialog() {
+        showWelcomeDialog = false
+        appPreferences.setFirstRunCompleted()
+    }
 
     var inputAmount by mutableStateOf("1")
         private set

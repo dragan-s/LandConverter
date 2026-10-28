@@ -1,18 +1,22 @@
 package com.example.landconverter.presentation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.landconverter.data.local.LandUnitEntity
+import com.example.landconverter.data.model.BalkanCountry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,12 +44,11 @@ fun ConverterScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            DropdownField(
+            CountryDropdownField(
                 label = strings.countryLabel,
-                selectedText = country.displayName,
-                options = viewModel.countries,
-                optionLabel = { it.displayName },
-                onOptionSelected = viewModel::onCountryChange
+                selectedCountry = country,
+                countries = viewModel.countries,
+                onCountrySelected = viewModel::onCountryChange
             )
 
             OutlinedTextField(
@@ -59,20 +62,18 @@ fun ConverterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            DropdownField(
+            UnitDropdownField(
                 label = strings.fromUnitLabel,
-                selectedText = fromUnit?.displayName ?: "",
-                options = availableUnits,
-                optionLabel = { it.displayName },
-                onOptionSelected = viewModel::onFromUnitChange
+                selectedUnit = fromUnit,
+                units = availableUnits,
+                onUnitSelected = viewModel::onFromUnitChange
             )
 
-            DropdownField(
+            UnitDropdownField(
                 label = strings.toUnitLabel,
-                selectedText = toUnit?.displayName ?: "",
-                options = availableUnits,
-                optionLabel = { it.displayName },
-                onOptionSelected = viewModel::onToUnitChange
+                selectedUnit = toUnit,
+                units = availableUnits,
+                onUnitSelected = viewModel::onToUnitChange
             )
 
             ResultCard(
@@ -93,6 +94,46 @@ fun ConverterScreen(
                 Spacer(Modifier.width(8.dp))
                 Text("Upravljaj merama")
             }
+        }
+
+        // Welcome / How it works Dialog (shown only on first run)
+        if (viewModel.showWelcomeDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissWelcomeDialog() },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                title = { Text("O aplikaciji LandConverter") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "LandConverter vam omogućava brzo i jednostavno preračunavanje površina zemljišta između standardnih i regionalnih mera.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "• Izbor države: Izaberite državu/region za pristup specifičnim lokalnim merama (npr. Dulum, Motika, Ralo, Lanac, Jutro).",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "• Preračun: Unesite vrednost i izaberite početnu i ciljnu meru za automatski preračun u realnom vremenu.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "• Upravljanje merama: Klikom na \"Upravljaj merama\" možete prilagoditi vrednosti postojećih mera ili dodati sopstvene mere.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { viewModel.dismissWelcomeDialog() }) {
+                        Text("Razumem")
+                    }
+                }
+            )
         }
     }
 }
@@ -130,46 +171,48 @@ private fun ResultCard(title: String, expression: String, result: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> DropdownField(
+private fun CountryDropdownField(
     label: String,
-    selectedText: String,
-    options: List<T>,
-    optionLabel: (T) -> String,
-    onOptionSelected: (T) -> Unit,
+    selectedCountry: BalkanCountry,
+    countries: List<BalkanCountry>,
+    onCountrySelected: (BalkanCountry) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth()
+    ) {
         OutlinedTextField(
-            value = selectedText,
+            value = "${selectedCountry.flagEmoji}  ${selectedCountry.displayName}",
             onValueChange = {},
             readOnly = true,
-            enabled = false,
-            singleLine = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
             modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .fillMaxWidth()
-                .clickable { expanded = true }
         )
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth()
+            onDismissRequest = { expanded = false }
         ) {
-            options.forEach { option ->
+            countries.forEach { item ->
+                val isSelected = item.id == selectedCountry.id
                 DropdownMenuItem(
-                    text = { Text(optionLabel(option)) },
+                    text = {
+                        Text(
+                            text = "${item.flagEmoji}  ${item.displayName}",
+                            style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyLarge
+                        )
+                    },
+                    trailingIcon = if (isSelected) {
+                        { Icon(Icons.Default.Check, contentDescription = "Izabrano", tint = MaterialTheme.colorScheme.primary) }
+                    } else null,
                     onClick = {
-                        onOptionSelected(option)
+                        onCountrySelected(item)
                         expanded = false
                     }
                 )
@@ -177,3 +220,65 @@ private fun <T> DropdownField(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UnitDropdownField(
+    label: String,
+    selectedUnit: LandUnitEntity?,
+    units: List<LandUnitEntity>,
+    onUnitSelected: (LandUnitEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selectedUnit?.displayName ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            units.forEach { unit ->
+                val isSelected = unit.id == selectedUnit?.id
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = unit.displayName,
+                                style = if (isSelected) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = formatSqmValue(unit.valueInSqMeters),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    trailingIcon = if (isSelected) {
+                        { Icon(Icons.Default.Check, contentDescription = "Izabrano", tint = MaterialTheme.colorScheme.primary) }
+                    } else null,
+                    onClick = {
+                        onUnitSelected(unit)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun formatSqmValue(value: Double): String =
+    value.toBigDecimal().stripTrailingZeros().toPlainString() + " m²"
