@@ -15,8 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
+import com.example.landconverter.domain.model.LandUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -225,9 +225,9 @@ private fun CountryDropdownField(
 @Composable
 private fun UnitDropdownField(
     label: String,
-    selectedUnit: LandUnitEntity?,
-    units: List<LandUnitEntity>,
-    onUnitSelected: (LandUnitEntity) -> Unit,
+    selectedUnit: LandUnit?,
+    units: List<LandUnit>,
+    onUnitSelected: (LandUnit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }

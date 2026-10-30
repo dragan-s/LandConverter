@@ -5,7 +5,10 @@ import androidx.room.withTransaction
 import com.example.landconverter.data.local.AppDatabase
 import com.example.landconverter.data.local.LandUnitDao
 import com.example.landconverter.data.local.LandUnitEntity
+import com.example.landconverter.data.local.toDomain
+import com.example.landconverter.domain.model.LandUnit
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,8 +54,10 @@ class LandUnitRepository @Inject constructor(
     private val landUnitDao: LandUnitDao,
     private val appDatabase: AppDatabase
 ) {
-    fun observeUnitsForCountry(countryCode: String): Flow<List<LandUnitEntity>> {
-        return landUnitDao.observeUnitsForCountry(countryCode)
+    fun observeUnitsForCountry(countryCode: String): Flow<List<LandUnit>> {
+        return landUnitDao.observeUnitsForCountry(countryCode).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     /**
@@ -198,7 +203,7 @@ class LandUnitRepository @Inject constructor(
         }
     }
 
-    suspend fun updateUserUnit(entity: LandUnitEntity): UpdateUnitResult {
+    suspend fun updateUserUnit(entity: LandUnit): UpdateUnitResult {
         if (entity.sourceType != "USER_DEFINED" || entity.isSystem) {
             return UpdateUnitResult.NotEditable
         }

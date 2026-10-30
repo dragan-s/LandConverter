@@ -5,14 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
 import com.example.landconverter.data.preferences.AppPreferences
 import com.example.landconverter.data.repository.LandUnitRepository
+import com.example.landconverter.domain.model.LandUnit
 import com.example.landconverter.domain.usecase.ConversionResult
 import com.example.landconverter.domain.usecase.ConvertAreaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -46,7 +47,8 @@ class ConverterViewModel @Inject constructor(
 
     private val _countryFlow = MutableStateFlow(selectedCountry)
 
-    val availableUnits: StateFlow<List<LandUnitEntity>> =
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val availableUnits: StateFlow<List<LandUnit>> =
         _countryFlow
             .flatMapLatest { country ->
                 repository.observeUnitsForCountry(country.id)
@@ -58,9 +60,9 @@ class ConverterViewModel @Inject constructor(
                 emptyList()
             )
 
-    var fromUnit: LandUnitEntity? by mutableStateOf(null)
+    var fromUnit: LandUnit? by mutableStateOf(null)
         private set
-    var toUnit: LandUnitEntity? by mutableStateOf(null)
+    var toUnit: LandUnit? by mutableStateOf(null)
         private set
 
     var resultAmount by mutableStateOf("0")
@@ -83,7 +85,7 @@ class ConverterViewModel @Inject constructor(
      * ne bi koristila staru vrednost ili naziv nakon izmene na ekranu "Upravljaj merama".
      * Ako izabrane mere više nema (obrisana je ili je promenjena država), bira se podrazumevana.
      */
-    private fun syncSelection(units: List<LandUnitEntity>) {
+    private fun syncSelection(units: List<LandUnit>) {
         if (units.isEmpty()) return
 
         // Nikada ne prihvataj jedinice druge države.
@@ -120,14 +122,14 @@ class ConverterViewModel @Inject constructor(
         }
     }
 
-    fun onFromUnitChange(unit: LandUnitEntity) {
+    fun onFromUnitChange(unit: LandUnit) {
         if (unit.countryCode != selectedCountry.id) return
         if (availableUnits.value.none { it.id == unit.id }) return
         fromUnit = unit
         recalculateNow()
     }
 
-    fun onToUnitChange(unit: LandUnitEntity) {
+    fun onToUnitChange(unit: LandUnit) {
         if (unit.countryCode != selectedCountry.id) return
         if (availableUnits.value.none { it.id == unit.id }) return
         toUnit = unit

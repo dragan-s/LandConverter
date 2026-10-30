@@ -19,12 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.landconverter.data.local.LandUnitEntity
+import com.example.landconverter.domain.model.LandUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +37,7 @@ fun ManageUnitsScreen(
     val editableUnits = remember(units) { units.filter { !it.isSystem } }
 
     var countryMenuExpanded by remember { mutableStateOf(false) }
-    var unitToDelete by remember { mutableStateOf<LandUnitEntity?>(null) }
+    var unitToDelete by remember { mutableStateOf<LandUnit?>(null) }
 
     // Ako postoje nesačuvane izmene, napuštanje ekrana ili promena države traži potvrdu.
     var pendingDiscard by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -334,7 +334,7 @@ private fun MarqueeOutlinedTextField(
 
 @Composable
 private fun UnitEditRow(
-    unit: LandUnitEntity,
+    unit: LandUnit,
     draft: UnitDraft?,
     nameError: String?,
     valueError: String?,

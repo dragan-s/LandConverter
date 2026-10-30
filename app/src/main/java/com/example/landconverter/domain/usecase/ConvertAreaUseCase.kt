@@ -1,5 +1,6 @@
 package com.example.landconverter.domain.usecase
 
+import com.example.landconverter.domain.util.parsePositiveNumber
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
@@ -16,21 +17,14 @@ sealed interface ConversionResult {
  */
 class ConvertAreaUseCase @Inject constructor() {
 
-    // Pozitivan broj: "12", "12.5", "12,5", "12." ili ".5". Bez znaka, slova i više separatora.
-    private val validNumber = Regex("""^(\d+([.,]\d*)?|[.,]\d+)$""")
-
     operator fun invoke(
         input: String,
         fromUnitSqMeters: Double,
         toUnitSqMeters: Double
     ): ConversionResult {
-        val trimmed = input.trim()
-        if (trimmed.isEmpty()) return ConversionResult.Empty
-        if (!validNumber.matches(trimmed)) return ConversionResult.InvalidInput
+        if (input.trim().isEmpty()) return ConversionResult.Empty
 
-        val value = trimmed.replace(',', '.').toDoubleOrNull()
-            ?: return ConversionResult.InvalidInput
-        if (!value.isFinite()) return ConversionResult.InvalidInput
+        val value = parsePositiveNumber(input) ?: return ConversionResult.InvalidInput
 
         val result = value * fromUnitSqMeters / toUnitSqMeters
         if (!result.isFinite()) return ConversionResult.InvalidInput

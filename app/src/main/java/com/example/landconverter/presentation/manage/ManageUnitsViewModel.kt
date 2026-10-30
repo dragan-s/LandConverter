@@ -7,12 +7,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
 import com.example.landconverter.data.repository.ApplyChangesResult
 import com.example.landconverter.data.repository.LandUnitRepository
 import com.example.landconverter.data.repository.NewUnitSpec
 import com.example.landconverter.data.repository.UpdateUnitSpec
+import com.example.landconverter.domain.model.LandUnit
+import com.example.landconverter.domain.util.parsePositiveNumber
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +57,7 @@ class ManageUnitsViewModel @Inject constructor(
     private val _selectedCountryFlow = MutableStateFlow(selectedCountry)
 
     /** Nove i obrisane mere se pamte kao Compose stanje radi direktnog praćenja u UI-ju. */
-    var pendingNewUnits: List<LandUnitEntity> by mutableStateOf(emptyList())
+    var pendingNewUnits: List<LandUnit> by mutableStateOf(emptyList())
         private set
 
     var pendingDeletions: Set<Long> by mutableStateOf(emptySet())
@@ -65,7 +66,7 @@ class ManageUnitsViewModel @Inject constructor(
     private var nextTempId = -1L
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val units: StateFlow<List<LandUnitEntity>> = combine(
+    val units: StateFlow<List<LandUnit>> = combine(
         _selectedCountryFlow.flatMapLatest { country ->
             repository.observeUnitsForCountry(country.id)
         },
@@ -114,7 +115,7 @@ class ManageUnitsViewModel @Inject constructor(
     }
 
     /** Samo pamti nacrt i prikazuje greške; ništa se ne upisuje u bazu. */
-    fun onDraftChange(unit: LandUnitEntity, name: String, value: String) {
+    fun onDraftChange(unit: LandUnit, name: String, value: String) {
         val unchanged = name == unit.displayName && value == formatUnitValue(unit.valueInSqMeters)
         drafts = if (unchanged) drafts - unit.id else drafts + (unit.id to UnitDraft(name, value))
         editErrors = validateDrafts()
@@ -153,13 +154,13 @@ class ManageUnitsViewModel @Inject constructor(
                 countryCode = pending.countryCode,
                 unitId = pending.unitId,
                 displayName = (draft?.name ?: pending.displayName).trim(),
-                valueInSqMeters = draft?.let { parsePositiveValue(it.value) } ?: pending.valueInSqMeters
+                valueInSqMeters = draft?.let { parsePositiveNumber(it.value) } ?: pending.valueInSqMeters
             )
         }
 
         val updates = pendingDrafts.mapNotNull { (id, draft) ->
             if (id < 0 || id in currentPendingDeletions || id !in currentDbUnits) return@mapNotNull null
-            val value = parsePositiveValue(draft.value) ?: return@mapNotNull null
+            val value = parsePositiveNumber(draft.value) ?: return@mapNotNull null
             UpdateUnitSpec(
                 id = id,
                 displayName = draft.name.trim(),
@@ -231,7 +232,7 @@ class ManageUnitsViewModel @Inject constructor(
         }
 
         val tempId = nextTempId--
-        val newPendingUnit = LandUnitEntity(
+        val newPendingUnit = LandUnit(
             id = tempId,
             countryCode = selectedCountry.id,
             unitId = "custom_" + UUID.randomUUID(),
@@ -257,7 +258,7 @@ class ManageUnitsViewModel @Inject constructor(
             errorMessage = "Naziv mere je obavezan."
             return null
         }
-        val value = parsePositiveValue(valueText)
+        val value = parsePositiveNumber(valueText)
         if (value == null) {
             errorMessage = "Unesite ispravnu pozitivnu vrednost u m²."
             return null
@@ -279,21 +280,10 @@ class ManageUnitsViewModel @Inject constructor(
                 } -> "Naziv već postoji."
                 else -> null
             }
-            val valueError = if (parsePositiveValue(draft.value) == null) "Unesite broj > 0" else null
+            val valueError = if (parsePositiveNumber(draft.value) == null) "Unesite broj > 0" else null
             if (nameError != null || valueError != null) id to UnitEditErrors(nameError, valueError) else null
         }.toMap()
     }
 
     private fun normalizeName(name: String): String = name.trim().replace(Regex("\\s+"), " ")
-
-    /** Pozitivan broj ("12", "12.5", "12,5", "12." ili ".5"); sve ostalo je nevalidno. */
-    private fun parsePositiveValue(text: String): Double? {
-        val trimmed = text.trim()
-        if (!numberRegex.matches(trimmed)) return null
-        return trimmed.replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }
-    }
-
-    private companion object {
-        val numberRegex = Regex("""^(\d+([.,]\d*)?|[.,]\d+)$""")
-    }
 }
