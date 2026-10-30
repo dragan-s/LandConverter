@@ -35,21 +35,23 @@
 ##  Project Structure
 
 ```text
-com.example.landconverter/
+com.djes021.landconverter / com.example.landconverter/
 ├── data/
-│   ├── local/             # Room Database (AppDatabase v2), DAO, LandUnitEntity, InitialDataCallback, SeedUnit
+│   ├── local/             # Room Database, DAO, LandUnitEntity, InitialDataCallback, SeedUnit, LandUnitMapper
 │   ├── model/             # Data models (BalkanCountry with flag emojis)
 │   ├── preferences/       # AppPreferences for first-run onboarding state
-│   └── repository/        # LandUnitRepository for database queries, SaveUnitResult, and persistence
+│   └── repository/        # LandUnitRepository (atomic withTransaction applyChanges)
 ├── domain/
-│   └── usecase/           # Business logic (ConvertAreaUseCase)
+│   ├── model/             # Clean domain model (LandUnit)
+│   ├── usecase/           # Business logic (ConvertAreaUseCase)
+│   └── util/              # Utilities (parsePositiveNumber)
 ├── presentation/
 │   ├── manage/            # Unit management feature (ManageUnitsScreen, ManageUnitsViewModel)
 │   ├── navigation/        # Compose Navigation graph (NavGraph)
 │   ├── theme/             # Material 3 color schemes and typography
 │   ├── ConverterScreen.kt # Primary conversion screen
 │   ├── ConverterViewModel.kt
-│   └── CountryStringProvider.kt # UI localization provider
+│   └── CountryStringProvider.kt # Multi-country UI localization provider
 └── di/
     ├── AppModule.kt       # Application-level Hilt module
     └── DatabaseModule.kt  # Room Database Hilt module
