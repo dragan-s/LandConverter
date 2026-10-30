@@ -1,69 +1,73 @@
 # LandConverter
 
-**LandConverter** is a modern Android application built with **Jetpack Compose**, **Room Database**, and **Hilt** that allows users to convert land area measurements between standard SI units (`m²`, `ar`, `ha`) and traditional regional land units (*Dulum*, *Motika*, *Ralo*, *Lanac*, *Jutro / Ral*) used across Balkan countries.
+**LandConverter** is a production-ready, modern Android application built with **Jetpack Compose**, **Room Persistence Library**, and **Hilt**. It enables users to convert land area measurements between standard SI units (`m²`, `ar`, `ha`) and traditional regional land units (*Dulum*, *Motika*, *Ralo*, *Lanac*, *Jutro / Ral*) used across Balkan countries.
 
 ---
 
 ##  Key Features
 
-- **Standard & Traditional Unit Conversion**: Seamlessly convert between square meters (`m²`), ares (`a`), hectares (`ha`), and regional traditional units.
-- **Regional Variations Support**: Pre-configured regional conversion formulas and localized terminology for:
+- **SI & Traditional Land Unit Conversion**: Convert seamlessly between square meters (`m²`), ares (`a`), hectares (`ha`), and regional traditional units.
+- **Dynamic Multi-Country Localization**: Pre-configured regional conversion formulas and real-time localized terminology for:
   -  **Serbia** (`rs`)
   -  **Bosnia and Herzegovina** (`ba`)
   -  **Croatia** (`hr`)
   -  **Montenegro** (`me`)
   -  **North Macedonia** (`mk`)
-- **Custom Unit Management**: Dedicated **Manage Units** screen allowing users to edit unit values or add custom regional units per country.
-- **Transactional Database Seeding**: Transaction-safe initial database seeding (`InitialDataCallback`) ensuring preset regional units are loaded reliably on first launch without resurrecting deleted custom units on app restarts.
-- **Offline Persistence & Migration**: Room Database (v2) pre-populated with historical default units, unique country/unit indexing, and full local database persistence.
-- **First-Run Onboarding Dialog**: Automatic welcome dialog on the first app launch guiding users on regional selection, conversion, and unit customization.
-- **Enhanced Material 3 UI & Pop-ups**: Clean, edge-to-edge UI with regional country flags (🇷🇸, 🇧🇦, 🇭🇷, 🇲🇪, 🇲🇰), rich unit dropdown menus with m² size hints, active checkmarks, smart marquee animations, and confirmation dialogs.
+- **Unit Management with Deferred State**: Dedicated **Manage Units** screen allowing users to edit unit values, add custom units, or remove units locally in memory. All changes are committed atomically to Room DB only when clicking *"Sačuvaj"*.
+- **Atomic Database Operations**: All batch unit changes (Add, Edit, Delete) execute inside a single SQLite `withTransaction` block, guaranteeing zero partial writes or DB desynchronization.
+- **Process Survival (`SavedStateHandle`)**: ViewModel state (entered amount, selected country, chosen units) persists across Android system background process death.
+- **First-Run Onboarding Dialog**: Automatic first-launch welcome dialog (`AppPreferences`) introducing app features, country selection, and custom unit options.
+- **Transactional Seeding**: Transaction-safe initial database callback (`InitialDataCallback`) ensuring preset regional units are seeded on first run without resurrecting deleted custom units on restarts.
+- **Material 3 UI**: Edge-to-edge layout, regional flag emojis, rich unit dropdown menus with m² size hints, active checkmarks, smart marquee typography for long unit names, and back-handler confirm dialogs.
 
 ---
 
 ##  Tech Stack & Architecture
 
+- **Language & Runtime**: Kotlin 2.1+, Java 17 toolchain, Gradle 8+.
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with [Material 3](https://m3.material.io/) & Navigation Compose.
-- **Architecture**: Clean Architecture / MVVM (Model-View-ViewModel) pattern.
-- **Local Database**: [Room Persistence Library](https://developer.android.com/training/data-storage/room) v2.8.5 with [KSP2](https://kotlinlang.org/docs/ksp-overview.html) support.
-- **Dependency Injection**: [Hilt](https://dagger.dev/hilt/).
-- **Concurrency & Reactive Data**: Kotlin Coroutines, `Flow`, and `StateFlow`.
-- **Language & Compiler**: Kotlin 2.1 with Gradle 9+.
+- **Architecture**: MVVM + Clean Architecture pattern (Data, Domain, Presentation layers).
+- **Local Database**: [Room Persistence Library](https://developer.android.com/training/data-storage/room) v2.8.5 with KSP2 & Room Schema Export enabled.
+- **Dependency Injection**: [Hilt (Dagger)](https://dagger.dev/hilt/).
+- **Concurrency & Reactive Data**: Kotlin Coroutines, `Flow`, `StateFlow`, `combine`, and `snapshotFlow`.
+- **State Preservation**: `SavedStateHandle` for ViewModel process survival.
+- **Preferences**: `SharedPreferences` via `AppPreferences` for first-run onboarding state.
 
 ---
 
 ##  Project Structure
 
 ```text
-com.djes021.landconverter / com.example.landconverter/
+com.djes021.landconverter/
 ├── data/
-│   ├── local/             # Room Database, DAO, LandUnitEntity, InitialDataCallback, SeedUnit, LandUnitMapper
+│   ├── local/             # Room Database (AppDatabase), DAO (LandUnitDao), Entity (LandUnitEntity), InitialDataCallback, SeedUnit, LandUnitMapper
 │   ├── model/             # Data models (BalkanCountry with flag emojis)
 │   ├── preferences/       # AppPreferences for first-run onboarding state
 │   └── repository/        # LandUnitRepository (atomic withTransaction applyChanges)
+├── di/
+│   ├── LandConverterApp.kt# Hilt Application class
+│   └── DatabaseModule.kt  # Hilt module for Room database
 ├── domain/
 │   ├── model/             # Clean domain model (LandUnit)
 │   ├── usecase/           # Business logic (ConvertAreaUseCase)
-│   └── util/              # Utilities (parsePositiveNumber)
-├── presentation/
-│   ├── manage/            # Unit management feature (ManageUnitsScreen, ManageUnitsViewModel)
-│   ├── navigation/        # Compose Navigation graph (NavGraph)
-│   ├── theme/             # Material 3 color schemes and typography
-│   ├── ConverterScreen.kt # Primary conversion screen
-│   ├── ConverterViewModel.kt
-│   └── CountryStringProvider.kt # Multi-country UI localization provider
-└── di/
-    ├── AppModule.kt       # Application-level Hilt module
-    └── DatabaseModule.kt  # Room Database Hilt module
+│   └── util/              # Validation utilities (parsePositiveNumber, UnitValidation)
+└── presentation/
+    ├── manage/            # Unit management feature (ManageUnitsScreen, ManageUnitsViewModel)
+    ├── navigation/        # Compose Navigation graph (NavGraph)
+    ├── theme/             # Material 3 color schemes and typography
+    ├── ConverterScreen.kt # Primary conversion screen
+    ├── ConverterViewModel.kt
+    ├── CountryStringProvider.kt # Multi-country UI localization provider
+    └── MainActivity.kt    # Single activity entry point
 ```
 
 ---
 
-## ️ Getting Started
+##  Getting Started
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/LandConverter.git
+   git clone https://github.com/djes021/LandConverter.git
    ```
 2. **Open in Android Studio**: Open the project in Android Studio (Ladybug / 2024.2+ recommended).
-3. **Build & Run**: Sync Gradle and run `:app` on an Android emulator or physical device (Android 7.0 / API 24+).
+3. **Build & Run**: Sync Gradle and run the `:app` target on an Android emulator or physical device (Android 7.0 / API 24+).

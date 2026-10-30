@@ -3,6 +3,7 @@ package com.djes021.landconverter.presentation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.djes021.landconverter.data.model.BalkanCountry
@@ -22,6 +23,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class ConverterViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val repository: LandUnitRepository,
     private val convertAreaUseCase: ConvertAreaUseCase,
     private val appPreferences: AppPreferences
@@ -35,9 +37,14 @@ class ConverterViewModel @Inject constructor(
         appPreferences.setFirstRunCompleted()
     }
 
-    var inputAmount by mutableStateOf("1")
+    // Uneta količina, država i izabrane mere čuvaju se u SavedStateHandle,
+    // pa se vraćaju i kada Android ubije proces aplikacije u pozadini.
+    var inputAmount by mutableStateOf(savedStateHandle.get<String>(KEY_AMOUNT) ?: "1")
         private set
-    var selectedCountry: BalkanCountry by mutableStateOf(BalkanCountry.Serbia)
+    var selectedCountry: BalkanCountry by mutableStateOf(
+        BalkanCountry.all.find { it.id == savedStateHandle.get<String>(KEY_COUNTRY) }
+            ?: BalkanCountry.Serbia
+    )
         private set
 
     val countries = BalkanCountry.all
@@ -103,18 +110,25 @@ class ConverterViewModel @Inject constructor(
 
         // Zadrži izbor ako jedinica i dalje postoji.
         // U suprotnom izaberi podrazumevanu jedinicu.
-        fromUnit = currentUnits.firstOrNull {
-            it.id == fromUnit?.id
-        } ?: currentUnits.first()
+        // Posle ubijanja procesa fromUnit/toUnit su null, pa se koriste sačuvani ID-evi.
+        val wantedFromId = fromUnit?.id ?: savedStateHandle.get<Long>(KEY_FROM_UNIT)
+        val wantedToId = toUnit?.id ?: savedStateHandle.get<Long>(KEY_TO_UNIT)
 
-        toUnit = currentUnits.firstOrNull {
-            it.id == toUnit?.id
-        } ?: currentUnits.getOrNull(1) ?: currentUnits.first()
+        val newFrom = currentUnits.firstOrNull { it.id == wantedFromId } ?: currentUnits.first()
+        val newTo = currentUnits.firstOrNull { it.id == wantedToId }
+            ?: currentUnits.getOrNull(1) ?: currentUnits.first()
+
+        fromUnit = newFrom
+        toUnit = newTo
+        savedStateHandle[KEY_FROM_UNIT] = newFrom.id
+        savedStateHandle[KEY_TO_UNIT] = newTo.id
         recalculate()
     }
 
     fun onInputChange(value: String) {
         inputAmount = value
+        // Ograničeno da stanje ne preraste limit Bundle-a pri velikom nalepljenom tekstu.
+        savedStateHandle[KEY_AMOUNT] = value.take(MAX_SAVED_INPUT_LENGTH)
         debounceJob?.cancel()
         debounceJob = viewModelScope.launch {
             delay(INPUT_DEBOUNCE_MS.milliseconds)
@@ -126,6 +140,7 @@ class ConverterViewModel @Inject constructor(
         if (unit.countryCode != selectedCountry.id) return
         if (availableUnits.value.none { it.id == unit.id }) return
         fromUnit = unit
+        savedStateHandle[KEY_FROM_UNIT] = unit.id
         recalculateNow()
     }
 
@@ -133,6 +148,7 @@ class ConverterViewModel @Inject constructor(
         if (unit.countryCode != selectedCountry.id) return
         if (availableUnits.value.none { it.id == unit.id }) return
         toUnit = unit
+        savedStateHandle[KEY_TO_UNIT] = unit.id
         recalculateNow()
     }
 
@@ -141,10 +157,13 @@ class ConverterViewModel @Inject constructor(
 
         debounceJob?.cancel()
         selectedCountry = country
+        savedStateHandle[KEY_COUNTRY] = country.id
 
-        // Ukloni izbore prethodne države odmah.
+        // Ukloni izbore prethodne države odmah (uključujući sačuvane ID-eve mera).
         fromUnit = null
         toUnit = null
+        savedStateHandle.remove<Long>(KEY_FROM_UNIT)
+        savedStateHandle.remove<Long>(KEY_TO_UNIT)
         inputError = null
         resultAmount = "0"
 
@@ -200,5 +219,11 @@ class ConverterViewModel @Inject constructor(
 
     private companion object {
         const val INPUT_DEBOUNCE_MS = 300L
+        const val MAX_SAVED_INPUT_LENGTH = 100
+
+        const val KEY_AMOUNT = "converter_amount"
+        const val KEY_COUNTRY = "converter_country"
+        const val KEY_FROM_UNIT = "converter_from_unit"
+        const val KEY_TO_UNIT = "converter_to_unit"
     }
 }
