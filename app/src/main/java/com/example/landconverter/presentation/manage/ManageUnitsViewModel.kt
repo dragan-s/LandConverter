@@ -8,9 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.landconverter.data.local.LandUnitEntity
 import com.example.landconverter.data.model.BalkanCountry
+import com.example.landconverter.data.repository.ApplyChangesResult
 import com.example.landconverter.data.repository.LandUnitRepository
-import com.example.landconverter.data.repository.SaveUnitResult
-import com.example.landconverter.data.repository.UpdateUnitResult
+import com.example.landconverter.data.repository.NewUnitSpec
+import com.example.landconverter.data.repository.UpdateUnitSpec
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,36 +125,11 @@ class ManageUnitsViewModel @Inject constructor(
     }
 
     /**
-     * Upisuje sve nove, izmenjene i obrisane mere u bazu. Ako bilo koja ima grešku,
-     * ništa se ne upisuje, greške ostaju prikazane i `onSaved` se ne poziva (ekran ostaje otvoren).
+     * Upisuje sve nove, izmenjene i obrisane mere u bazu u jednoj atomičnoj transakciji.
+     * Ako bilo koja ima grešku, ništa se ne upisuje u bazu i nesačuvana stanja ostaju sačuvana.
      */
     fun saveChanges(onSaved: () -> Unit) {
-        // Ako korisnik ima unet tekst u formu za novu meru, dodaj ga prvo u listu privremenih novih mera
-        if (newUnitName.isNotBlank() || newUnitValue.isNotBlank()) {
-            val value = validateNewUnitInput() ?: return
-            val name = newUnitName.trim()
-            val normalized = normalizeName(name)
-            val existingNames = units.value.map { normalizeName(drafts[it.id]?.name ?: it.displayName) }
-            if (existingNames.any { it.equals(normalized, ignoreCase = true) }) {
-                errorMessage = "Mera sa ovim nazivom već postoji u izabranoj državi."
-                return
-            }
-
-            val tempId = nextTempId--
-            val newPendingUnit = LandUnitEntity(
-                id = tempId,
-                countryCode = selectedCountry.id,
-                unitId = "custom_" + UUID.randomUUID(),
-                displayName = name,
-                valueInSqMeters = value,
-                isSystem = false,
-                sourceType = "USER_DEFINED"
-            )
-            _pendingNewUnitsFlow.value = _pendingNewUnitsFlow.value + newPendingUnit
-            newUnitName = ""
-            newUnitValue = ""
-            errorMessage = null
-        }
+        if (!addPendingUnitFromForm(isExplicitAdd = false)) return
 
         val errors = validateDrafts()
         editErrors = errors
@@ -164,59 +140,49 @@ class ManageUnitsViewModel @Inject constructor(
         val currentDbUnits = units.value.filter { it.id > 0 && it.id !in currentPendingDeletions }.associateBy { it.id }
         val pendingDrafts = drafts
 
+        val additions = currentPendingNew.map { pending ->
+            val draft = pendingDrafts[pending.id]
+            NewUnitSpec(
+                countryCode = pending.countryCode,
+                unitId = pending.unitId,
+                displayName = (draft?.name ?: pending.displayName).trim(),
+                valueInSqMeters = draft?.let { parsePositiveValue(it.value) } ?: pending.valueInSqMeters
+            )
+        }
+
+        val updates = pendingDrafts.mapNotNull { (id, draft) ->
+            if (id < 0 || id in currentPendingDeletions || id !in currentDbUnits) return@mapNotNull null
+            val value = parsePositiveValue(draft.value) ?: return@mapNotNull null
+            UpdateUnitSpec(
+                id = id,
+                displayName = draft.name.trim(),
+                valueInSqMeters = value
+            )
+        }
+
         viewModelScope.launch {
-            // 1. Brisanje mera iz baze koje su označene za brisanje
-            for (id in currentPendingDeletions) {
-                if (id > 0) {
-                    repository.deleteUnit(id)
+            val result = repository.applyChanges(
+                countryCode = selectedCountry.id,
+                deletions = currentPendingDeletions,
+                additions = additions,
+                updates = updates
+            )
+
+            when (result) {
+                ApplyChangesResult.Success -> {
+                    discardChanges()
+                    onSaved()
+                }
+                ApplyChangesResult.DuplicateName -> {
+                    errorMessage = "Postoje izmene sa istim nazivom mere u izabranoj državi."
+                }
+                ApplyChangesResult.Invalid -> {
+                    errorMessage = "Neispravni podaci u izmenama mera."
+                }
+                ApplyChangesResult.Error -> {
+                    errorMessage = "Greška pri čuvanju izmena. Pokušajte ponovo."
                 }
             }
-
-            // 2. Upis novih mera u bazu
-            for (pending in currentPendingNew) {
-                val draft = pendingDrafts[pending.id]
-                val finalName = (draft?.name ?: pending.displayName).trim()
-                val finalValue = draft?.let { parsePositiveValue(it.value) } ?: pending.valueInSqMeters
-
-                val result = repository.saveUserUnit(
-                    countryCode = pending.countryCode,
-                    unitId = pending.unitId,
-                    displayName = finalName,
-                    valueInSqMeters = finalValue
-                )
-                when (result) {
-                    SaveUnitResult.Saved -> Unit
-                    SaveUnitResult.DuplicateName -> {
-                        errorMessage = "Mera sa nazivom \"$finalName\" već postoji."
-                        return@launch
-                    }
-                    SaveUnitResult.Duplicate, SaveUnitResult.Invalid -> {
-                        errorMessage = "Greška pri čuvanju mere \"$finalName\"."
-                        return@launch
-                    }
-                }
-            }
-
-            // 3. Ažuriranje postojećih mera u bazi
-            for ((id, draft) in pendingDrafts) {
-                if (id < 0 || id in currentPendingDeletions) continue
-                val unit = currentDbUnits[id] ?: continue
-                val value = parsePositiveValue(draft.value) ?: continue
-                when (repository.updateUserUnit(unit.copy(displayName = draft.name, valueInSqMeters = value))) {
-                    UpdateUnitResult.Updated, UpdateUnitResult.NotEditable -> Unit
-                    UpdateUnitResult.DuplicateName -> {
-                        editErrors = editErrors + (id to UnitEditErrors(nameError = "Naziv već postoji."))
-                        return@launch
-                    }
-                    UpdateUnitResult.Invalid -> {
-                        editErrors = editErrors + (id to UnitEditErrors(valueError = "Unesite broj > 0"))
-                        return@launch
-                    }
-                }
-            }
-
-            discardChanges()
-            onSaved()
         }
     }
 
@@ -233,14 +199,28 @@ class ManageUnitsViewModel @Inject constructor(
 
     /** Dodaje novu meru u privremenu listu bez upisa u bazu. Baza se ažurira tek na "Sačuvaj". */
     fun addNewUnit() {
-        val value = validateNewUnitInput() ?: return
+        addPendingUnitFromForm(isExplicitAdd = true)
+    }
+
+    /**
+     * Dodaje novu meru iz forme u privremenu listu bez upisa u bazu.
+     * @param isExplicitAdd true ako se poziva na dugme "Dodaj meru" (mora imati unose),
+     *                      false ako se poziva iz `saveChanges` (dodaje samo ako je unet bar neki tekst).
+     * @return true ako je operacija bila uspešna (ili nema ničeg za dodavanje u saveChanges),
+     *         false ako je došlo do greške pri validaciji.
+     */
+    private fun addPendingUnitFromForm(isExplicitAdd: Boolean = false): Boolean {
+        val hasInput = newUnitName.isNotBlank() || newUnitValue.isNotBlank()
+        if (!hasInput && !isExplicitAdd) return true
+
+        val value = validateNewUnitInput() ?: return false
         val name = newUnitName.trim()
 
         val normalized = normalizeName(name)
         val existingNames = units.value.map { normalizeName(drafts[it.id]?.name ?: it.displayName) }
         if (existingNames.any { it.equals(normalized, ignoreCase = true) }) {
             errorMessage = "Mera sa ovim nazivom već postoji u izabranoj državi."
-            return
+            return false
         }
 
         val tempId = nextTempId--
@@ -258,6 +238,7 @@ class ManageUnitsViewModel @Inject constructor(
         newUnitName = ""
         newUnitValue = ""
         errorMessage = null
+        return true
     }
 
     /** Validira ulazna polja u formi za novu meru i postavlja `errorMessage` ako je neispravno. */

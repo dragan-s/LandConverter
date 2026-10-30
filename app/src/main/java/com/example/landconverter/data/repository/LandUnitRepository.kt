@@ -1,10 +1,33 @@
 package com.example.landconverter.data.repository
 
+import android.database.sqlite.SQLiteConstraintException
+import androidx.room.withTransaction
+import com.example.landconverter.data.local.AppDatabase
 import com.example.landconverter.data.local.LandUnitDao
 import com.example.landconverter.data.local.LandUnitEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class NewUnitSpec(
+    val countryCode: String,
+    val unitId: String,
+    val displayName: String,
+    val valueInSqMeters: Double
+)
+
+data class UpdateUnitSpec(
+    val id: Long,
+    val displayName: String,
+    val valueInSqMeters: Double
+)
+
+sealed interface ApplyChangesResult {
+    data object Success : ApplyChangesResult
+    data object DuplicateName : ApplyChangesResult
+    data object Invalid : ApplyChangesResult
+    data object Error : ApplyChangesResult
+}
 
 sealed interface SaveUnitResult {
     data object Saved : SaveUnitResult
@@ -25,15 +48,110 @@ sealed interface UpdateUnitResult {
 
 @Singleton
 class LandUnitRepository @Inject constructor(
-    private val landUnitDao: LandUnitDao
+    private val landUnitDao: LandUnitDao,
+    private val appDatabase: AppDatabase
 ) {
     fun observeUnitsForCountry(countryCode: String): Flow<List<LandUnitEntity>> {
         return landUnitDao.observeUnitsForCountry(countryCode)
     }
 
-    /*suspend fun getUnitsForCountry(countryCode: String): List<LandUnitEntity> {
-        return landUnitDao.getUnitsForCountry(countryCode)
-    }*/
+    /**
+     * Atomično primenjuje sve izmene (brisanja, dodavanja i ažuriranja) u jednoj bazičnoj transakciji.
+     * Proverava konfilterisano KONAČNO stanje naziva pre zapisa.
+     */
+    suspend fun applyChanges(
+        countryCode: String,
+        deletions: Set<Long>,
+        additions: List<NewUnitSpec>,
+        updates: List<UpdateUnitSpec>
+    ): ApplyChangesResult {
+        val normalizedCountryCode = countryCode.trim().lowercase()
+
+        // 1. Učitaj trenutne mere iz baze za državu
+        val dbUnits = landUnitDao.getUnitsForCountry(normalizedCountryCode)
+        val dbUnitsMap = dbUnits.associateBy { it.id }
+
+        // 2. Validacija za obrisane i izmenjene mere
+        for (id in deletions) {
+            val unit = dbUnitsMap[id]
+            if (unit != null && (unit.isSystem || unit.sourceType != "USER_DEFINED")) {
+                return ApplyChangesResult.Invalid
+            }
+        }
+
+        for (update in updates) {
+            val unit = dbUnitsMap[update.id]
+            if (unit == null || unit.isSystem || unit.sourceType != "USER_DEFINED") {
+                return ApplyChangesResult.Invalid
+            }
+            if (normalizeName(update.displayName).isBlank() || !update.valueInSqMeters.isFinite() || update.valueInSqMeters <= 0.0) {
+                return ApplyChangesResult.Invalid
+            }
+        }
+
+        for (addition in additions) {
+            if (
+                normalizeName(addition.displayName).isBlank() ||
+                addition.unitId.isBlank() ||
+                !addition.valueInSqMeters.isFinite() ||
+                addition.valueInSqMeters <= 0.0
+            ) {
+                return ApplyChangesResult.Invalid
+            }
+        }
+
+        // 3. Proverava KONAČNO stanje naziva za državu nakon svih brisanja, izmena i dodavanja
+        val updatesMap = updates.associateBy { it.id }
+        val remainingUnits = dbUnits.filter { it.id !in deletions }
+
+        val finalNames = remainingUnits.map { unit ->
+            val update = updatesMap[unit.id]
+            normalizeName(update?.displayName ?: unit.displayName)
+        } + additions.map { normalizeName(it.displayName) }
+
+        val lowerNames = finalNames.map { it.lowercase() }
+        if (lowerNames.distinct().size != lowerNames.size) {
+            return ApplyChangesResult.DuplicateName
+        }
+
+        // 4. Izvrši sve promene u jednoj atomičnoj transakciji
+        return try {
+            appDatabase.withTransaction {
+                // a) Brisanje
+                for (id in deletions) {
+                    if (id > 0) {
+                        landUnitDao.deleteNonSystemUnit(id)
+                    }
+                }
+
+                // b) Ažuriranje
+                for (update in updates) {
+                    landUnitDao.updateUserUnit(
+                        id = update.id,
+                        displayName = normalizeName(update.displayName),
+                        valueInSqMeters = update.valueInSqMeters
+                    )
+                }
+
+                // c) Dodavanje
+                for (addition in additions) {
+                    landUnitDao.insertUnit(
+                        LandUnitEntity(
+                            countryCode = normalizedCountryCode,
+                            unitId = addition.unitId.trim().lowercase(),
+                            displayName = normalizeName(addition.displayName),
+                            valueInSqMeters = addition.valueInSqMeters,
+                            isSystem = false,
+                            sourceType = "USER_DEFINED"
+                        )
+                    )
+                }
+            }
+            ApplyChangesResult.Success
+        } catch (e: Exception) {
+            ApplyChangesResult.Error
+        }
+    }
 
     suspend fun saveUserUnit(
         countryCode: String,
@@ -75,8 +193,7 @@ class LandUnitRepository @Inject constructor(
                 )
             )
             SaveUnitResult.Saved
-        } catch (e: android.database.sqlite.SQLiteConstraintException) {
-            // Pokriva i slučaj kada drugi upis nastane između provere i insert-a.
+        } catch (e: SQLiteConstraintException) {
             SaveUnitResult.Duplicate
         }
     }
@@ -111,7 +228,6 @@ class LandUnitRepository @Inject constructor(
         landUnitDao.deleteNonSystemUnit(id)
     }
 
-    /** Poredi se u Kotlinu jer SQLite LOWER() ne radi sa ćirilicom i slovima č, ć, š, ž, đ. */
     private suspend fun nameExists(countryCode: String, name: String, excludeId: Long?): Boolean =
         landUnitDao.getUnitsForCountry(countryCode).any { existing ->
             existing.id != excludeId &&
