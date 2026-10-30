@@ -9,6 +9,5 @@ data class LandUnit(
     val unitId: String,
     val displayName: String,
     val valueInSqMeters: Double,
-    val isSystem: Boolean,
-    val sourceType: String = "USER_DEFINED"
+    val isSystem: Boolean
 )

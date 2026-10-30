@@ -79,14 +79,14 @@ class LandUnitRepository @Inject constructor(
         // 2. Validacija za obrisane i izmenjene mere
         for (id in deletions) {
             val unit = dbUnitsMap[id]
-            if (unit != null && (unit.isSystem || unit.sourceType != "USER_DEFINED")) {
+            if (unit != null && unit.isSystem) {
                 return ApplyChangesResult.Invalid
             }
         }
 
         for (update in updates) {
             val unit = dbUnitsMap[update.id]
-            if (unit == null || unit.isSystem || unit.sourceType != "USER_DEFINED") {
+            if (unit == null || unit.isSystem) {
                 return ApplyChangesResult.Invalid
             }
             if (normalizeName(update.displayName).isBlank() || !update.valueInSqMeters.isFinite() || update.valueInSqMeters <= 0.0) {
@@ -146,8 +146,7 @@ class LandUnitRepository @Inject constructor(
                             unitId = addition.unitId.trim().lowercase(),
                             displayName = normalizeName(addition.displayName),
                             valueInSqMeters = addition.valueInSqMeters,
-                            isSystem = false,
-                            sourceType = "USER_DEFINED"
+                            isSystem = false
                         )
                     )
                 }
@@ -193,8 +192,7 @@ class LandUnitRepository @Inject constructor(
                     unitId = normalizedUnitId,
                     displayName = normalizedDisplayName,
                     valueInSqMeters = valueInSqMeters,
-                    isSystem = false,
-                    sourceType = "USER_DEFINED"
+                    isSystem = false
                 )
             )
             SaveUnitResult.Saved
@@ -204,7 +202,7 @@ class LandUnitRepository @Inject constructor(
     }
 
     suspend fun updateUserUnit(entity: LandUnit): UpdateUnitResult {
-        if (entity.sourceType != "USER_DEFINED" || entity.isSystem) {
+        if (entity.isSystem) {
             return UpdateUnitResult.NotEditable
         }
 

@@ -8,16 +8,14 @@ data class SeedUnit(
     val unitId: String,
     val displayName: String,
     val valueInSqMeters: Double,
-    val isSystem: Boolean,
-    val sourceType: String
+    val isSystem: Boolean
 ) {
     fun toContentValues(countryCode: String): ContentValues = contentValuesOf(
         "countryCode" to countryCode,
         "unitId" to unitId,
         "displayName" to displayName,
         "valueInSqMeters" to valueInSqMeters,
-        "isSystem" to (if (isSystem) 1 else 0),
-        "sourceType" to sourceType
+        "isSystem" to (if (isSystem) 1 else 0)
     )
 }
 
@@ -29,15 +27,13 @@ object InitialUnits {
     private const val JUTRO_RAL_SQM = 5754.64
 
     private fun systemUnits(sqmName: String = "Kvadratni metar (m²)") = listOf(
-        SeedUnit("sqm", sqmName, 1.0, isSystem = true, sourceType = "BUILT_IN"),
-        SeedUnit("ar", "Ar (a)", 100.0, isSystem = true, sourceType = "BUILT_IN"),
-        SeedUnit("ha", "Hektar (ha)", 10_000.0, isSystem = true, sourceType = "BUILT_IN")
+        SeedUnit("sqm", sqmName, 1.0, isSystem = true),
+        SeedUnit("ar", "Ar (a)", 100.0, isSystem = true),
+        SeedUnit("ha", "Hektar (ha)", 10_000.0, isSystem = true)
     )
 
-    // Tradicionalne mere korisnik sme da menja, zato su USER_DEFINED
-    // (updateUserUnit menja samo mere sa tim tipom).
     private fun traditional(unitId: String, name: String, value: Double) =
-        SeedUnit(unitId, name, value, isSystem = false, sourceType = "USER_DEFINED")
+        SeedUnit(unitId, name, value, isSystem = false)
 
     val byCountry: Map<String, List<SeedUnit>> = mapOf(
         "ba" to systemUnits() + listOf(

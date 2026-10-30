@@ -8,8 +8,7 @@ fun LandUnitEntity.toDomain(): LandUnit = LandUnit(
     unitId = unitId,
     displayName = displayName,
     valueInSqMeters = valueInSqMeters,
-    isSystem = isSystem,
-    sourceType = sourceType
+    isSystem = isSystem
 )
 
 fun LandUnit.toEntity(): LandUnitEntity = LandUnitEntity(
@@ -18,6 +17,5 @@ fun LandUnit.toEntity(): LandUnitEntity = LandUnitEntity(
     unitId = unitId,
     displayName = displayName,
     valueInSqMeters = valueInSqMeters,
-    isSystem = isSystem,
-    sourceType = sourceType
+    isSystem = isSystem
 )

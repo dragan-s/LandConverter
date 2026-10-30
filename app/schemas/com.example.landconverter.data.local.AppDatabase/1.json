@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c41a21e5add3f4b9538467dd01e0d944",
+    "identityHash": "c658de8a1a4d6551fab5407dcc0b710f",
     "entities": [
       {
         "tableName": "land_units",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `countryCode` TEXT NOT NULL, `unitId` TEXT NOT NULL, `displayName` TEXT NOT NULL, `valueInSqMeters` REAL NOT NULL, `isSystem` INTEGER NOT NULL, `sourceType` TEXT NOT NULL DEFAULT 'USER_DEFINED')",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `countryCode` TEXT NOT NULL, `unitId` TEXT NOT NULL, `displayName` TEXT NOT NULL, `valueInSqMeters` REAL NOT NULL, `isSystem` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -43,13 +43,6 @@
             "columnName": "isSystem",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "sourceType",
-            "columnName": "sourceType",
-            "affinity": "TEXT",
-            "notNull": true,
-            "defaultValue": "'USER_DEFINED'"
           }
         ],
         "primaryKey": {
@@ -74,7 +67,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c41a21e5add3f4b9538467dd01e0d944')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c658de8a1a4d6551fab5407dcc0b710f')"
     ]
   }
 }

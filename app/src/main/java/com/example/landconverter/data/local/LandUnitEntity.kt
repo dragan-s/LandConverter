@@ -1,6 +1,5 @@
 package com.example.landconverter.data.local
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -21,9 +20,5 @@ data class LandUnitEntity(
     val unitId: String,      // e.g. "sqm", "ar", "ha", "dulum", "motika", etc.
     val displayName: String,
     val valueInSqMeters: Double,
-    val isSystem: Boolean ,   // true for m2, ar, ha (fixed, read-only)
-
-    // BUILT_IN = defined by the app; USER_DEFINED = created by the user
-    @ColumnInfo(defaultValue = "'USER_DEFINED'")
-    val sourceType: String = "USER_DEFINED"
+    val isSystem: Boolean    // true for m2, ar, ha (fixed, read-only)
 )

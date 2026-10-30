@@ -238,8 +238,7 @@ class ManageUnitsViewModel @Inject constructor(
             unitId = "custom_" + UUID.randomUUID(),
             displayName = name,
             valueInSqMeters = value,
-            isSystem = false,
-            sourceType = "USER_DEFINED"
+            isSystem = false
         )
 
         pendingNewUnits = pendingNewUnits + newPendingUnit

@@ -26,7 +26,6 @@ interface LandUnitDao {
         unitId: String
     ): LandUnitEntity?
 
-
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertUnit(unit: LandUnitEntity): Long
 
@@ -35,7 +34,6 @@ interface LandUnitDao {
     SET displayName = :displayName,
         valueInSqMeters = :valueInSqMeters
     WHERE id = :id
-      AND sourceType = 'USER_DEFINED'
       AND isSystem = 0
     """)
     suspend fun updateUserUnit(
