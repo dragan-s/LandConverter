@@ -3,6 +3,7 @@ package com.example.landconverter.presentation.manage
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -53,8 +54,14 @@ class ManageUnitsViewModel @Inject constructor(
     val countries = BalkanCountry.all
 
     private val _selectedCountryFlow = MutableStateFlow(selectedCountry)
-    private val _pendingNewUnitsFlow = MutableStateFlow<List<LandUnitEntity>>(emptyList())
-    private val _pendingDeletionsFlow = MutableStateFlow<Set<Long>>(emptySet())
+
+    /** Nove i obrisane mere se pamte kao Compose stanje radi direktnog praćenja u UI-ju. */
+    var pendingNewUnits: List<LandUnitEntity> by mutableStateOf(emptyList())
+        private set
+
+    var pendingDeletions: Set<Long> by mutableStateOf(emptySet())
+        private set
+
     private var nextTempId = -1L
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -62,10 +69,10 @@ class ManageUnitsViewModel @Inject constructor(
         _selectedCountryFlow.flatMapLatest { country ->
             repository.observeUnitsForCountry(country.id)
         },
-        _pendingNewUnitsFlow,
-        _pendingDeletionsFlow
-    ) { dbUnits, pendingUnits, pendingDeletions ->
-        (dbUnits + pendingUnits).filter { it.id !in pendingDeletions }
+        snapshotFlow { pendingNewUnits },
+        snapshotFlow { pendingDeletions }
+    ) { dbUnits, pendingNew, pendingDel ->
+        (dbUnits + pendingNew).filter { it.id !in pendingDel }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     var newUnitName by mutableStateOf("")
@@ -85,8 +92,8 @@ class ManageUnitsViewModel @Inject constructor(
 
     val hasUnsavedChanges: Boolean
         get() = drafts.isNotEmpty() ||
-                _pendingNewUnitsFlow.value.isNotEmpty() ||
-                _pendingDeletionsFlow.value.isNotEmpty() ||
+                pendingNewUnits.isNotEmpty() ||
+                pendingDeletions.isNotEmpty() ||
                 newUnitName.isNotBlank() ||
                 newUnitValue.isNotBlank()
 
@@ -116,8 +123,8 @@ class ManageUnitsViewModel @Inject constructor(
     fun discardChanges() {
         drafts = emptyMap()
         editErrors = emptyMap()
-        _pendingNewUnitsFlow.value = emptyList()
-        _pendingDeletionsFlow.value = emptySet()
+        pendingNewUnits = emptyList()
+        pendingDeletions = emptySet()
         newUnitName = ""
         newUnitValue = ""
         errorMessage = null
@@ -135,8 +142,8 @@ class ManageUnitsViewModel @Inject constructor(
         editErrors = errors
         if (errors.isNotEmpty()) return
 
-        val currentPendingDeletions = _pendingDeletionsFlow.value
-        val currentPendingNew = _pendingNewUnitsFlow.value.filter { it.id !in currentPendingDeletions }
+        val currentPendingDeletions = pendingDeletions
+        val currentPendingNew = pendingNewUnits.filter { it.id !in currentPendingDeletions }
         val currentDbUnits = units.value.filter { it.id > 0 && it.id !in currentPendingDeletions }.associateBy { it.id }
         val pendingDrafts = drafts
 
@@ -190,9 +197,9 @@ class ManageUnitsViewModel @Inject constructor(
     fun deleteUnit(unitId: Long) {
         drafts = drafts - unitId
         if (unitId < 0) {
-            _pendingNewUnitsFlow.value = _pendingNewUnitsFlow.value.filter { it.id != unitId }
+            pendingNewUnits = pendingNewUnits.filter { it.id != unitId }
         } else {
-            _pendingDeletionsFlow.value = _pendingDeletionsFlow.value + unitId
+            pendingDeletions = pendingDeletions + unitId
         }
         editErrors = validateDrafts()
     }
@@ -234,7 +241,7 @@ class ManageUnitsViewModel @Inject constructor(
             sourceType = "USER_DEFINED"
         )
 
-        _pendingNewUnitsFlow.value = _pendingNewUnitsFlow.value + newPendingUnit
+        pendingNewUnits = pendingNewUnits + newPendingUnit
         newUnitName = ""
         newUnitValue = ""
         errorMessage = null
