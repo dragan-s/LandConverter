@@ -33,6 +33,7 @@ fun ManageUnitsScreen(
     viewModel: ManageUnitsViewModel = hiltViewModel()
 ) {
     val selectedCountry = viewModel.selectedCountry
+    val uiStrings = viewModel.uiStrings
     val units by viewModel.units.collectAsState()
     val editableUnits = remember(units) { units.filter { !it.isSystem } }
 
@@ -49,7 +50,7 @@ fun ManageUnitsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Upravljaj merama") },
+                title = { Text(uiStrings.title) },
                 navigationIcon = {
                     IconButton(onClick = { requestLeave(onNavigateBack) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Nazad")
@@ -62,7 +63,7 @@ fun ManageUnitsScreen(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Sačuvaj")
+                        Text(uiStrings.saveButton)
                     }
                 }
             )
@@ -86,7 +87,7 @@ fun ManageUnitsScreen(
                         value = "${selectedCountry.flagEmoji}  ${selectedCountry.displayName}",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Država / sistem") },
+                        label = { Text(uiStrings.countryLabel) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryMenuExpanded) },
                         modifier = Modifier
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -129,14 +130,14 @@ fun ManageUnitsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            "Dodaj novu meru za ${selectedCountry.displayName}",
+                            uiStrings.addSectionTitle(selectedCountry.displayName),
                             style = MaterialTheme.typography.titleMedium
                         )
 
                         OutlinedTextField(
                             value = viewModel.newUnitName,
                             onValueChange = viewModel::onNewUnitNameChange,
-                            label = { Text("Naziv mere (npr. Motika)") },
+                            label = { Text(uiStrings.unitNameLabel) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -144,7 +145,7 @@ fun ManageUnitsScreen(
                         OutlinedTextField(
                             value = viewModel.newUnitValue,
                             onValueChange = viewModel::onNewUnitValueChange,
-                            label = { Text("Vrednost u m²") },
+                            label = { Text(uiStrings.unitValueLabel) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
@@ -162,7 +163,7 @@ fun ManageUnitsScreen(
                             onClick = { viewModel.addNewUnit() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Dodaj meru")
+                            Text(uiStrings.addUnitButton)
                         }
                     }
                 }
@@ -170,14 +171,14 @@ fun ManageUnitsScreen(
 
             // Section Header
             item {
-                Text("Postojeće mere", style = MaterialTheme.typography.titleMedium)
+                Text(uiStrings.existingUnitsHeader, style = MaterialTheme.typography.titleMedium)
             }
 
             // Existing Units List (excluding system units m2, ar, ha)
             if (editableUnits.isEmpty()) {
                 item {
                     Text(
-                        "Nema prilagođenih mera za ovu državu.",
+                        uiStrings.emptyUnitsMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -187,6 +188,8 @@ fun ManageUnitsScreen(
                     val errors = viewModel.editErrors[unit.id]
                     UnitEditRow(
                         unit = unit,
+                        nameLabel = uiStrings.unitNameFieldLabel,
+                        deleteContentDescription = uiStrings.deleteUnitContentDescription,
                         nameError = errors?.nameError,
                         valueError = errors?.valueError,
                         draft = viewModel.drafts[unit.id],
@@ -205,8 +208,8 @@ fun ManageUnitsScreen(
         pendingDiscard?.let { action ->
             AlertDialog(
                 onDismissRequest = { pendingDiscard = null },
-                title = { Text("Nesačuvane izmene") },
-                text = { Text("Imate izmene koje nisu sačuvane. Da li želite da ih odbacite?") },
+                title = { Text(uiStrings.unsavedChangesTitle) },
+                text = { Text(uiStrings.unsavedChangesText) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -215,12 +218,12 @@ fun ManageUnitsScreen(
                             action()
                         }
                     ) {
-                        Text("Odbaci", color = MaterialTheme.colorScheme.error)
+                        Text(uiStrings.discardButton, color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingDiscard = null }) {
-                        Text("Nastavi uređivanje")
+                        Text(uiStrings.continueEditingButton)
                     }
                 }
             )
@@ -230,9 +233,9 @@ fun ManageUnitsScreen(
         unitToDelete?.let { unit ->
             AlertDialog(
                 onDismissRequest = { unitToDelete = null },
-                title = { Text("Potvrda brisanja") },
+                title = { Text(uiStrings.confirmDeleteTitle) },
                 text = {
-                    Text("Da li ste sigurni da želite da obrišete meru \"${unit.displayName}\"? Izmena će biti sačuvana tek kada pritisnete \"Sačuvaj\".")
+                    Text(uiStrings.confirmDeleteText(unit.displayName))
                 },
                 confirmButton = {
                     TextButton(
@@ -241,12 +244,12 @@ fun ManageUnitsScreen(
                             unitToDelete = null
                         }
                     ) {
-                        Text("Obriši", color = MaterialTheme.colorScheme.error)
+                        Text(uiStrings.deleteConfirmButton, color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { unitToDelete = null }) {
-                        Text("Otkaži")
+                        Text(uiStrings.cancelButton)
                     }
                 }
             )
@@ -335,6 +338,8 @@ private fun MarqueeOutlinedTextField(
 @Composable
 private fun UnitEditRow(
     unit: LandUnit,
+    nameLabel: String,
+    deleteContentDescription: String,
     draft: UnitDraft?,
     nameError: String?,
     valueError: String?,
@@ -360,7 +365,7 @@ private fun UnitEditRow(
             MarqueeOutlinedTextField(
                 value = nameText,
                 onValueChange = { onChange(it, valueText) },
-                label = { Text("Naziv") },
+                label = { Text(nameLabel) },
                 isError = nameError != null,
                 supportingText = nameError,
                 modifier = Modifier.weight(1f)
@@ -379,7 +384,7 @@ private fun UnitEditRow(
             IconButton(onClick = onDelete, modifier = Modifier.padding(top = 4.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Obriši meru",
+                    contentDescription = deleteContentDescription,
                     tint = MaterialTheme.colorScheme.error
                 )
             }

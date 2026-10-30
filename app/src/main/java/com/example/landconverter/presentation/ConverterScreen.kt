@@ -92,7 +92,7 @@ fun ConverterScreen(
             ) {
                 Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Upravljaj merama")
+                Text(strings.manageUnitsButton)
             }
         }
 

@@ -2,23 +2,14 @@ package com.example.landconverter.data.model
 
 sealed class BalkanCountry(
     val id: String,
-    val displayName: String
-) {
+    val displayName: String,
     val flagEmoji: String
-        get() = when (id) {
-            "rs" -> "🇷🇸"
-            "ba" -> "🇧🇦"
-            "hr" -> "🇭🇷"
-            "me" -> "🇲🇪"
-            "mk" -> "🇲🇰"
-            else -> "🌐"
-        }
-
-    data object BosniaAndHerzegovina : BalkanCountry("ba", "Bosna i Hercegovina")
-    data object Serbia : BalkanCountry("rs", "Srbija")
-    data object Montenegro : BalkanCountry("me", "Crna Gora")
-    data object NorthMacedonia : BalkanCountry("mk", "Северна Македонија")
-    data object Croatia : BalkanCountry("hr", "Hrvatska")
+) {
+    data object BosniaAndHerzegovina : BalkanCountry("ba", "Bosna i Hercegovina", "🇧🇦")
+    data object Serbia : BalkanCountry("rs", "Srbija", "🇷🇸")
+    data object Montenegro : BalkanCountry("me", "Crna Gora", "🇲🇪")
+    data object NorthMacedonia : BalkanCountry("mk", "Северна Македонија", "🇲🇰")
+    data object Croatia : BalkanCountry("hr", "Hrvatska", "🇭🇷")
 
     companion object {
         val all: List<BalkanCountry>

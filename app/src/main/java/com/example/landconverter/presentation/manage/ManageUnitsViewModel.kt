@@ -14,6 +14,8 @@ import com.example.landconverter.data.repository.NewUnitSpec
 import com.example.landconverter.data.repository.UpdateUnitSpec
 import com.example.landconverter.domain.model.LandUnit
 import com.example.landconverter.domain.util.parsePositiveNumber
+import com.example.landconverter.presentation.CountryStringProvider
+import com.example.landconverter.presentation.ManageUnitsUiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +53,9 @@ class ManageUnitsViewModel @Inject constructor(
         BalkanCountry.all.find { it.id == initialCountryCode } ?: BalkanCountry.Serbia
     )
         private set
+
+    val uiStrings: ManageUnitsUiStrings
+        get() = CountryStringProvider.getManageUnitsStrings(selectedCountry)
 
     val countries = BalkanCountry.all
 
@@ -182,13 +187,13 @@ class ManageUnitsViewModel @Inject constructor(
                     onSaved()
                 }
                 ApplyChangesResult.DuplicateName -> {
-                    errorMessage = "Postoje izmene sa istim nazivom mere u izabranoj državi."
+                    errorMessage = uiStrings.errDuplicateNameInState
                 }
                 ApplyChangesResult.Invalid -> {
-                    errorMessage = "Neispravni podaci u izmenama mera."
+                    errorMessage = uiStrings.errInvalidData
                 }
                 ApplyChangesResult.Error -> {
-                    errorMessage = "Greška pri čuvanju izmena. Pokušajte ponovo."
+                    errorMessage = uiStrings.errSaveFailed
                 }
             }
         }
@@ -227,7 +232,7 @@ class ManageUnitsViewModel @Inject constructor(
         val normalized = normalizeName(name)
         val existingNames = units.value.map { normalizeName(drafts[it.id]?.name ?: it.displayName) }
         if (existingNames.any { it.equals(normalized, ignoreCase = true) }) {
-            errorMessage = "Mera sa ovim nazivom već postoji u izabranoj državi."
+            errorMessage = uiStrings.errDuplicateName
             return false
         }
 
@@ -254,12 +259,12 @@ class ManageUnitsViewModel @Inject constructor(
         val valueText = newUnitValue.trim()
 
         if (name.isEmpty()) {
-            errorMessage = "Naziv mere je obavezan."
+            errorMessage = uiStrings.errNameRequired
             return null
         }
         val value = parsePositiveNumber(valueText)
         if (value == null) {
-            errorMessage = "Unesite ispravnu pozitivnu vrednost u m²."
+            errorMessage = uiStrings.errValueInvalid
             return null
         }
         return value
@@ -273,13 +278,13 @@ class ManageUnitsViewModel @Inject constructor(
         return drafts.mapNotNull { (id, draft) ->
             val name = normalizeName(draft.name)
             val nameError = when {
-                name.isEmpty() -> "Naziv je obavezan."
+                name.isEmpty() -> uiStrings.errNameRequired
                 effectiveNames.any { (otherId, other) ->
                     otherId != id && other.equals(name, ignoreCase = true)
-                } -> "Naziv već postoji."
+                } -> uiStrings.errDuplicateName
                 else -> null
             }
-            val valueError = if (parsePositiveNumber(draft.value) == null) "Unesite broj > 0" else null
+            val valueError = if (parsePositiveNumber(draft.value) == null) uiStrings.errValueInvalid else null
             if (nameError != null || valueError != null) id to UnitEditErrors(nameError, valueError) else null
         }.toMap()
     }
