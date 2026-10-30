@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.landconverter"
+    namespace = "com.djes021.landconverter"
     compileSdk = 37
 
     defaultConfig {
