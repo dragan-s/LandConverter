@@ -31,7 +31,7 @@
 - **Dependency Injection**: [Hilt (Dagger)](https://dagger.dev/hilt/).
 - **Concurrency & Reactive Data**: Kotlin Coroutines, `Flow`, `StateFlow`, `combine`, and `snapshotFlow`.
 - **State Preservation**: `SavedStateHandle` for ViewModel process survival.
-- **Preferences**: `SharedPreferences` via `AppPreferences` for first-run onboarding state.
+- **Preferences & Optimization**: `AppPreferences` for first-run onboarding state, plus modern AGP R8 `optimization { enable = true }` for production release builds.
 
 ---
 
