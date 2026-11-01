@@ -1,7 +1,7 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.1.20"
-ksp = "2.1.20-1.0.32"
+kotlin = "2.3.0"
+ksp = "2.3.8"
 hilt = "2.60.1"
 coreKtx = "1.19.1"
 lifecycle = "2.11.0"
@@ -31,7 +31,6 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 google-dagger-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

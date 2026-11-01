@@ -267,7 +267,6 @@ fun ManageUnitsScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MarqueeOutlinedTextField(
     value: String,

@@ -24,7 +24,7 @@
 
 ##  Tech Stack & Architecture
 
-- **Language & Runtime**: Kotlin 2.1+, Java 17 toolchain, Gradle 8+.
+- **Language & Runtime**: Kotlin 2.3+, Java 17 toolchain, Gradle 8+.
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with [Material 3](https://m3.material.io/) & Navigation Compose.
 - **Architecture**: MVVM + Clean Architecture pattern (Data, Domain, Presentation layers).
 - **Local Database**: [Room Persistence Library](https://developer.android.com/training/data-storage/room) v2.8.5 with KSP2 & Room Schema Export enabled.

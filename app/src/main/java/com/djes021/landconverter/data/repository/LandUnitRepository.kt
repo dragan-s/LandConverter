@@ -71,20 +71,20 @@ class LandUnitRepository @Inject constructor(
                 for (id in deletions) {
                     if (id > 0) landUnitDao.deleteNonSystemUnit(id)
                 }
-                for (update in updates) {
+                for ((id, displayName, valueInSqMeters) in updates) {
                     landUnitDao.updateUserUnit(
-                        id = update.id,
-                        displayName = normalizeUnitName(update.displayName),
-                        valueInSqMeters = update.valueInSqMeters
+                        id = id,
+                        displayName = normalizeUnitName(displayName),
+                        valueInSqMeters = valueInSqMeters
                     )
                 }
-                for (addition in additions) {
+                for ((unitId, displayName, valueInSqMeters) in additions) {
                     landUnitDao.insertUnit(
                         LandUnitEntity(
                             countryCode = normalizedCountryCode,
-                            unitId = addition.unitId.trim().lowercase(),
-                            displayName = normalizeUnitName(addition.displayName),
-                            valueInSqMeters = addition.valueInSqMeters,
+                            unitId = unitId.trim().lowercase(),
+                            displayName = normalizeUnitName(displayName),
+                            valueInSqMeters = valueInSqMeters,
                             isSystem = false
                         )
                     )
@@ -114,19 +114,19 @@ class LandUnitRepository @Inject constructor(
             if (unit != null && unit.isSystem) return ApplyChangesResult.Invalid
         }
 
-        for (update in updates) {
-            val unit = dbUnitsById[update.id]
+        for ((id, displayName, valueInSqMeters) in updates) {
+            val unit = dbUnitsById[id]
             if (unit == null || unit.isSystem) return ApplyChangesResult.Invalid
-            if (!isValidUnitName(update.displayName) || !isValidUnitValue(update.valueInSqMeters)) {
+            if (!isValidUnitName(displayName) || !isValidUnitValue(valueInSqMeters)) {
                 return ApplyChangesResult.Invalid
             }
         }
 
-        for (addition in additions) {
+        for ((unitId, displayName, valueInSqMeters) in additions) {
             if (
-                !isValidUnitName(addition.displayName) ||
-                addition.unitId.isBlank() ||
-                !isValidUnitValue(addition.valueInSqMeters)
+                !isValidUnitName(displayName) ||
+                unitId.isBlank() ||
+                !isValidUnitValue(valueInSqMeters)
             ) {
                 return ApplyChangesResult.Invalid
             }
