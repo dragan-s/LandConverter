@@ -12,7 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Save
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,8 +35,13 @@ fun ManageUnitsScreen(
 ) {
     val selectedCountry = viewModel.selectedCountry
     val uiStrings = viewModel.uiStrings
-    val units by viewModel.units.collectAsState()
+    val units by viewModel.units.collectAsStateWithLifecycle()
     val editableUnits = remember(units) { units.filter { !it.isSystem } }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarMessages.collect { message -> snackbarHostState.showSnackbar(message) }
+    }
 
     var countryMenuExpanded by remember { mutableStateOf(false) }
     var unitToDelete by remember { mutableStateOf<LandUnit?>(null) }
@@ -49,6 +54,7 @@ fun ManageUnitsScreen(
     BackHandler(enabled = viewModel.hasUnsavedChanges) { requestLeave(onNavigateBack) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState, modifier = Modifier.imePadding()) },
         topBar = {
             TopAppBar(
                 title = { Text(uiStrings.title) },
@@ -63,7 +69,7 @@ fun ManageUnitsScreen(
                         enabled = !viewModel.isSaving,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(uiStrings.saveButton)
                     }

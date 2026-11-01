@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.djes021.landconverter.data.model.BalkanCountry
 import com.djes021.landconverter.domain.model.LandUnit
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +28,7 @@ fun ConverterScreen(
     val strings = viewModel.uiStrings
     val country = viewModel.selectedCountry
     val error = viewModel.inputError
-    val availableUnits by viewModel.availableUnits.collectAsState()
+    val availableUnits by viewModel.availableUnits.collectAsStateWithLifecycle()
 
     val fromUnit = viewModel.fromUnit
     val toUnit = viewModel.toUnit

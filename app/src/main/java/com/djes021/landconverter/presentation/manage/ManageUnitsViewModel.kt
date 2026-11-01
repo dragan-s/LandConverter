@@ -22,11 +22,14 @@ import com.djes021.landconverter.presentation.CountryStringProvider
 import com.djes021.landconverter.presentation.ManageUnitsUiStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -118,6 +121,15 @@ class ManageUnitsViewModel @Inject constructor(
     var editErrors: Map<Long, UnitEditErrors> by mutableStateOf(emptyMap())
         private set
 
+    private val snackbarChannel = Channel<String>(Channel.BUFFERED)
+
+    /** Jednokratne poruke za Snackbar (npr. neuspešno "Sačuvaj"); Channel ih čuva dok ih ekran ne preuzme. */
+    val snackbarMessages: Flow<String> = snackbarChannel.receiveAsFlow()
+
+    private fun showMessage(message: String) {
+        snackbarChannel.trySend(message)
+    }
+
     /** True dok traje upis u bazu; dugme "Sačuvaj" je tada onemogućeno. */
     var isSaving by mutableStateOf(false)
         private set
@@ -170,11 +182,18 @@ class ManageUnitsViewModel @Inject constructor(
     fun saveChanges(onSaved: () -> Unit) {
         // Dupli dodir na "Sačuvaj" ne sme da pokrene upis (i povratak) dvaput.
         if (isSaving) return
-        if (!addPendingUnitFromForm(isExplicitAdd = false)) return
+        if (!addPendingUnitFromForm(isExplicitAdd = false)) {
+            // Greška u formi može biti van ekrana, pa se prikazuje i kao Snackbar.
+            errorMessage?.let(::showMessage)
+            return
+        }
 
         val errors = validateDrafts()
         editErrors = errors
-        if (errors.isNotEmpty()) return
+        if (errors.isNotEmpty()) {
+            errors.values.firstNotNullOfOrNull { it.nameError ?: it.valueError }?.let(::showMessage)
+            return
+        }
 
         val currentPendingDeletions = pendingDeletions
         val currentPendingNew = pendingNewUnits.filter { it.id !in currentPendingDeletions }
@@ -216,13 +235,13 @@ class ManageUnitsViewModel @Inject constructor(
                         onSaved()
                     }
                     ApplyChangesResult.DuplicateName -> {
-                        errorMessage = uiStrings.errDuplicateNameInState
+                        showMessage(uiStrings.errDuplicateNameInState)
                     }
                     ApplyChangesResult.Invalid -> {
-                        errorMessage = uiStrings.errInvalidData
+                        showMessage(uiStrings.errInvalidData)
                     }
                     ApplyChangesResult.Error -> {
-                        errorMessage = uiStrings.errSaveFailed
+                        showMessage(uiStrings.errSaveFailed)
                     }
                 }
             } finally {
