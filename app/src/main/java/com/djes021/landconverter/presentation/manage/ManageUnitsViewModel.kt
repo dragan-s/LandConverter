@@ -118,6 +118,10 @@ class ManageUnitsViewModel @Inject constructor(
     var editErrors: Map<Long, UnitEditErrors> by mutableStateOf(emptyMap())
         private set
 
+    /** True dok traje upis u bazu; dugme "Sačuvaj" je tada onemogućeno. */
+    var isSaving by mutableStateOf(false)
+        private set
+
     val hasUnsavedChanges: Boolean
         get() = drafts.isNotEmpty() ||
                 pendingNewUnits.isNotEmpty() ||
@@ -164,6 +168,8 @@ class ManageUnitsViewModel @Inject constructor(
      * Ako bilo koja ima grešku, ništa se ne upisuje u bazu i nesačuvana stanja ostaju sačuvana.
      */
     fun saveChanges(onSaved: () -> Unit) {
+        // Dupli dodir na "Sačuvaj" ne sme da pokrene upis (i povratak) dvaput.
+        if (isSaving) return
         if (!addPendingUnitFromForm(isExplicitAdd = false)) return
 
         val errors = validateDrafts()
@@ -178,7 +184,6 @@ class ManageUnitsViewModel @Inject constructor(
         val additions = currentPendingNew.map { pending ->
             val draft = pendingDrafts[pending.id]
             NewUnitSpec(
-                countryCode = pending.countryCode,
                 unitId = pending.unitId,
                 displayName = (draft?.name ?: pending.displayName).trim(),
                 valueInSqMeters = draft?.let { parseUnitValue(it.value) } ?: pending.valueInSqMeters
@@ -195,28 +200,33 @@ class ManageUnitsViewModel @Inject constructor(
             )
         }
 
+        isSaving = true
         viewModelScope.launch {
-            val result = repository.applyChanges(
-                countryCode = selectedCountry.id,
-                deletions = currentPendingDeletions,
-                additions = additions,
-                updates = updates
-            )
+            try {
+                val result = repository.applyChanges(
+                    countryCode = selectedCountry.id,
+                    deletions = currentPendingDeletions,
+                    additions = additions,
+                    updates = updates
+                )
 
-            when (result) {
-                ApplyChangesResult.Success -> {
-                    discardChanges()
-                    onSaved()
+                when (result) {
+                    ApplyChangesResult.Success -> {
+                        discardChanges()
+                        onSaved()
+                    }
+                    ApplyChangesResult.DuplicateName -> {
+                        errorMessage = uiStrings.errDuplicateNameInState
+                    }
+                    ApplyChangesResult.Invalid -> {
+                        errorMessage = uiStrings.errInvalidData
+                    }
+                    ApplyChangesResult.Error -> {
+                        errorMessage = uiStrings.errSaveFailed
+                    }
                 }
-                ApplyChangesResult.DuplicateName -> {
-                    errorMessage = uiStrings.errDuplicateNameInState
-                }
-                ApplyChangesResult.Invalid -> {
-                    errorMessage = uiStrings.errInvalidData
-                }
-                ApplyChangesResult.Error -> {
-                    errorMessage = uiStrings.errSaveFailed
-                }
+            } finally {
+                isSaving = false
             }
         }
     }

@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,6 +60,7 @@ fun ManageUnitsScreen(
                 actions = {
                     Button(
                         onClick = { viewModel.saveChanges(onNavigateBack) },
+                        enabled = !viewModel.isSaving,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -72,6 +74,8 @@ fun ManageUnitsScreen(
         LazyColumn(
             modifier = Modifier
                 .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding()
                 .fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -297,6 +301,8 @@ private fun MarqueeOutlinedTextField(
         keyboardOptions = keyboardOptions,
         interactionSource = interactionSource,
         textStyle = textStyle,
+        // BasicTextField ima podrazumevano crn kursor, nevidljiv u tamnoj temi.
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         decorationBox = { innerTextField ->
             OutlinedTextFieldDefaults.DecorationBox(
                 value = value,

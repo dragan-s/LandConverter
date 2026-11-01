@@ -1,5 +1,6 @@
 package com.djes021.landconverter.data.repository
 
+import android.util.Log
 import androidx.room.withTransaction
 import com.djes021.landconverter.data.local.AppDatabase
 import com.djes021.landconverter.data.local.LandUnitDao
@@ -15,8 +16,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Nova mera; država se prosleđuje jednom, kao parametar `applyChanges`. */
 data class NewUnitSpec(
-    val countryCode: String,
     val unitId: String,
     val displayName: String,
     val valueInSqMeters: Double
@@ -47,8 +48,9 @@ class LandUnitRepository @Inject constructor(
     }
 
     /**
-     * Atomično primenjuje sve izmene (brisanja, dodavanja i ažuriranja) u jednoj bazičnoj transakciji.
-     * Proverava konfilterisano KONAČNO stanje naziva pre zapisa.
+     * Atomično primenjuje sve izmene (brisanja, dodavanja i ažuriranja) u jednoj transakciji.
+     * Stanje se čita, proverava (uključujući KONAČNE nazive) i upisuje unutar iste transakcije,
+     * pa između provere i upisa ne može da se desi druga izmena.
      */
     suspend fun applyChanges(
         countryCode: String,
@@ -58,23 +60,63 @@ class LandUnitRepository @Inject constructor(
     ): ApplyChangesResult {
         val normalizedCountryCode = countryCode.trim().lowercase()
 
-        // 1. Učitaj trenutne mere iz baze za državu
-        val dbUnits = landUnitDao.getUnitsForCountry(normalizedCountryCode)
-        val dbUnitsMap = dbUnits.associateBy { it.id }
+        return try {
+            appDatabase.withTransaction {
+                val dbUnits = landUnitDao.getUnitsForCountry(normalizedCountryCode)
 
-        // 2. Validacija za obrisane i izmenjene mere
-        for (id in deletions) {
-            val unit = dbUnitsMap[id]
-            if (unit != null && unit.isSystem) {
-                return ApplyChangesResult.Invalid
+                // Ako nešto nije u redu, ništa se ne upisuje (transakcija se završava bez izmena).
+                validateChanges(dbUnits, deletions, additions, updates)
+                    ?.let { return@withTransaction it }
+
+                for (id in deletions) {
+                    if (id > 0) landUnitDao.deleteNonSystemUnit(id)
+                }
+                for (update in updates) {
+                    landUnitDao.updateUserUnit(
+                        id = update.id,
+                        displayName = normalizeUnitName(update.displayName),
+                        valueInSqMeters = update.valueInSqMeters
+                    )
+                }
+                for (addition in additions) {
+                    landUnitDao.insertUnit(
+                        LandUnitEntity(
+                            countryCode = normalizedCountryCode,
+                            unitId = addition.unitId.trim().lowercase(),
+                            displayName = normalizeUnitName(addition.displayName),
+                            valueInSqMeters = addition.valueInSqMeters,
+                            isSystem = false
+                        )
+                    )
+                }
+                ApplyChangesResult.Success
             }
+        } catch (e: CancellationException) {
+            // Otkazivanje korutine mora da se propagira (transakcija je već poništena).
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "applyChanges failed", e)
+            ApplyChangesResult.Error
+        }
+    }
+
+    /** Vraća razlog odbijanja ili `null` ako su sve promene ispravne. */
+    private fun validateChanges(
+        dbUnits: List<LandUnitEntity>,
+        deletions: Set<Long>,
+        additions: List<NewUnitSpec>,
+        updates: List<UpdateUnitSpec>
+    ): ApplyChangesResult? {
+        val dbUnitsById = dbUnits.associateBy { it.id }
+
+        for (id in deletions) {
+            val unit = dbUnitsById[id]
+            if (unit != null && unit.isSystem) return ApplyChangesResult.Invalid
         }
 
         for (update in updates) {
-            val unit = dbUnitsMap[update.id]
-            if (unit == null || unit.isSystem) {
-                return ApplyChangesResult.Invalid
-            }
+            val unit = dbUnitsById[update.id]
+            if (unit == null || unit.isSystem) return ApplyChangesResult.Invalid
             if (!isValidUnitName(update.displayName) || !isValidUnitValue(update.valueInSqMeters)) {
                 return ApplyChangesResult.Invalid
             }
@@ -90,58 +132,20 @@ class LandUnitRepository @Inject constructor(
             }
         }
 
-        // 3. Proverava KONAČNO stanje naziva za državu nakon svih brisanja, izmena i dodavanja
-        val updatesMap = updates.associateBy { it.id }
-        val remainingUnits = dbUnits.filter { it.id !in deletions }
-
-        val finalNames = remainingUnits.map { unit ->
-            val update = updatesMap[unit.id]
-            normalizeUnitName(update?.displayName ?: unit.displayName)
-        } + additions.map { normalizeUnitName(it.displayName) }
+        // KONAČNO stanje naziva nakon svih brisanja, izmena i dodavanja mora biti jedinstveno.
+        val updatesById = updates.associateBy { it.id }
+        val finalNames = dbUnits
+            .filter { it.id !in deletions }
+            .map { unit -> normalizeUnitName(updatesById[unit.id]?.displayName ?: unit.displayName) } +
+                additions.map { normalizeUnitName(it.displayName) }
 
         val lowerNames = finalNames.map { it.lowercase() }
-        if (lowerNames.distinct().size != lowerNames.size) {
-            return ApplyChangesResult.DuplicateName
-        }
+        if (lowerNames.distinct().size != lowerNames.size) return ApplyChangesResult.DuplicateName
 
-        // 4. Izvrši sve promene u jednoj atomičnoj transakciji
-        return try {
-            appDatabase.withTransaction {
-                // a) Brisanje
-                for (id in deletions) {
-                    if (id > 0) {
-                        landUnitDao.deleteNonSystemUnit(id)
-                    }
-                }
+        return null
+    }
 
-                // b) Ažuriranje
-                for (update in updates) {
-                    landUnitDao.updateUserUnit(
-                        id = update.id,
-                        displayName = normalizeUnitName(update.displayName),
-                        valueInSqMeters = update.valueInSqMeters
-                    )
-                }
-
-                // c) Dodavanje
-                for (addition in additions) {
-                    landUnitDao.insertUnit(
-                        LandUnitEntity(
-                            countryCode = normalizedCountryCode,
-                            unitId = addition.unitId.trim().lowercase(),
-                            displayName = normalizeUnitName(addition.displayName),
-                            valueInSqMeters = addition.valueInSqMeters,
-                            isSystem = false
-                        )
-                    )
-                }
-            }
-            ApplyChangesResult.Success
-        } catch (e: CancellationException) {
-            // Otkazivanje korutine mora da se propagira (transakcija je već poništena).
-            throw e
-        } catch (e: Exception) {
-            ApplyChangesResult.Error
-        }
+    private companion object {
+        const val TAG = "LandUnitRepository"
     }
 }

@@ -26,7 +26,12 @@ fun LandConverterNavGraph() {
             arguments = listOf(navArgument("countryCode") { type = NavType.StringType })
         ) {
             ManageUnitsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    // Brz dupli dodir ne sme da skine i početni ekran sa steka.
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                }
             )
         }
     }

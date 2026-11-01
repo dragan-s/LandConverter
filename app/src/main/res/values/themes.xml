@@ -1,3 +1,4 @@
 <resources>
-    <style name="Theme.LandConverter" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--  Tamna tema prozora, da nema belog bljeska pri pokretanju u tamnom režimu.  -->
+    <style name="Theme.LandConverter" parent="android:Theme.Material.NoActionBar"/>
 </resources>
